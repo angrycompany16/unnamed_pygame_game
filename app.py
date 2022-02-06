@@ -8,7 +8,7 @@ import os
 # ------------------ CONSTANTS ---------------------
 
 
-WIDTH = 640
+WIDTH = 1280
 HEIGHT = 640
 PIXELS_PER_UNIT = 2
 RED = pygame.Color(255, 0, 0)
