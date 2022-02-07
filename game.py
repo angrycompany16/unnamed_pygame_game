@@ -1,9 +1,8 @@
-from doctest import testfile
 import math
-from numpy import tile
-import pygame
+import pygame as pyg
 import vectors
 import os
+import enum
 
 # ------------------ CONSTANTS ---------------------
 
@@ -11,7 +10,7 @@ import os
 WIDTH = 640
 HEIGHT = 640
 PIXELS_PER_UNIT = 2
-RED = pygame.Color(255, 0, 0)
+RED = pyg.Color(255, 0, 0)
 
 
 # --------------------------------------------------
@@ -20,14 +19,14 @@ RED = pygame.Color(255, 0, 0)
 # --------- INITIALIZATION & VARIABLES -------------
 
 
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-surf = pygame.Surface((WIDTH, HEIGHT))
-tilemap_surf = pygame.Surface((WIDTH, HEIGHT))
+pyg.init()
+screen = pyg.display.set_mode((WIDTH, HEIGHT))
+surf = pyg.Surface((WIDTH, HEIGHT))
+tilemap_surf = pyg.Surface((WIDTH, HEIGHT))
 
-moving_sprites = pygame.sprite.Group()
+moving_sprites = pyg.sprite.Group()
 
-main_clock = pygame.time.Clock()
+main_clock = pyg.time.Clock()
 delta_time = 0
 
 tilemap = [
@@ -54,7 +53,7 @@ tilemap = [
 ]
 
 path = os.getcwd()
-tileset_image = pygame.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap-ting.png'))
+tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap-ting.png'))
 
 tileset_width = int(tileset_image.get_width() / 16)
 tileset_height = int(tileset_image.get_height() / 16)
@@ -64,23 +63,54 @@ tileset_height = int(tileset_image.get_height() / 16)
 tileset = []
 
 for i in range(tileset_width * tileset_height):
-    tileset.append(pygame.Surface((16, 16)))
+    tileset.append(pyg.Surface((16, 16)))
 
 test_arr = [0] * tileset_width * tileset_height
 
 for i in range(tileset_height):
     for j in range(tileset_width):
-        tileset[4 * i + j].blit(tileset_image, (0, 0), pygame.Rect((16 * j, 16 * i), (16, 16)))
+        tileset[4 * i + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
 
 
 # --------------------------------------------------
 
 
+# ----------------- INPUT & OUTPUT -----------------
+
+
+class Axis(enum.Enum):
+    X = 1
+    Y = 2
+
+def GetAxis(axis) -> int:
+    if axis == Axis.X:
+        if pyg.key.get_pressed()[pyg.K_a]:
+            return -1
+        elif pyg.key.get_pressed()[pyg.K_d]:
+            return 1
+        else:
+            return 0
+    elif axis == Axis.Y:
+        if pyg.key.get_pressed()[pyg.K_w]:
+            return -1
+        elif pyg.key.get_pressed()[pyg.K_s]:
+            return 1
+        else:
+            return 0
+    else:
+        print("{} is not a valid axis!".format(axis))
+
+
+# --------------------------------------------------
+
 class PhysicsObject():
-    def __init__(self, position, velocity, acceleration):
+    def __init__(self, position, velocity, acceleration, gravity = True):
         self.position = position
         self.velocity = velocity
         self.acceleration = acceleration
+
+        if gravity:
+            self.acceleration = [0, 9.81]
 
     def calculate_movement(self):
         self.velocity += self.acceleration * delta_time
@@ -89,16 +119,17 @@ class PhysicsObject():
         return self.position
 
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, player_physics, image):
-        pygame.sprite.Sprite.__init__(self)
+class Player(pyg.sprite.Sprite):
+    def __init__(self, player_physics, image, move_speed = 30):
+        pyg.sprite.Sprite.__init__(self)
 
         self.player_physics = player_physics
         self.image = image
-        self.rect = pygame.Rect(
+        self.rect = pyg.Rect(
             player_physics.position, 
             (image.get_width(), image.get_height())
         )
+        self.move_speed = move_speed
 
         moving_sprites.add(self)
 
@@ -108,16 +139,14 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = new_pos[0]
         self.rect.y = new_pos[1]
 
-    def change_position(self):
-        pass
-
 player = Player(
     PhysicsObject(
         vectors.Vec([32, 32]),
-        vectors.Vec([20, 0]),
-        vectors.Vec([0, 10])
+        vectors.Vec([0, 0]),
+        vectors.Vec([0, 0]),
+        gravity=False
     ),
-    pygame.image.load(os.path.join('Sprites', 'char.png'))
+    pyg.image.load(os.path.join('Sprites', 'char.png'))
 )
 
 def update_physics():
@@ -129,6 +158,9 @@ def update_physics():
 
 running = True
 while running:
+    player.player_physics.velocity[0] = GetAxis(Axis.X) * player.move_speed
+    player.player_physics.velocity[1] = GetAxis(Axis.Y) * player.move_speed
+
 
     update_physics()
 
@@ -139,21 +171,30 @@ while running:
     moving_sprites.update()
     moving_sprites.draw(surf)
 
-    screen.blit(pygame.transform.scale(
+    screen.blit(pyg.transform.scale(
             surf, 
             (WIDTH * PIXELS_PER_UNIT, HEIGHT * PIXELS_PER_UNIT)
         ), 
         (0, 0)
     )
 
-    pygame.display.update()
+    pyg.display.update()
 
     delta_time = main_clock.tick() / 1000
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    for event in pyg.event.get():
+        if event.type == pyg.QUIT:
             running = False
-            pygame.quit()
+            pyg.quit()
+        if event.type == pyg.KEYDOWN:
+            if event.key == pyg.K_w:
+                print("w")
+            if event.key == pyg.K_a:
+                print("a")
+            if event.key == pyg.K_s:
+                print("s")
+            if event.key == pyg.K_d:
+                print("d")
 
 
 # --------------------------------------------------
