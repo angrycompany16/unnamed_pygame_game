@@ -146,7 +146,7 @@ player = Player(
         vectors.Vec([0, 0]),
         gravity=False
     ),
-    pyg.image.load(os.path.join('Sprites', 'char.png'))
+    pyg.image.load(os.path.join('Sprites', 'character.png'))
 )
 
 def update_physics():
@@ -160,7 +160,6 @@ running = True
 while running:
     player.player_physics.velocity[0] = GetAxis(Axis.X) * player.move_speed
     player.player_physics.velocity[1] = GetAxis(Axis.Y) * player.move_speed
-
 
     update_physics()
 
@@ -186,15 +185,6 @@ while running:
         if event.type == pyg.QUIT:
             running = False
             pyg.quit()
-        if event.type == pyg.KEYDOWN:
-            if event.key == pyg.K_w:
-                print("w")
-            if event.key == pyg.K_a:
-                print("a")
-            if event.key == pyg.K_s:
-                print("s")
-            if event.key == pyg.K_d:
-                print("d")
 
 
 # --------------------------------------------------
