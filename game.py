@@ -3,10 +3,10 @@ import pygame as pyg
 import vectors
 import os
 import enum
-import drawer
 
 # ------------------ CONSTANTS ---------------------
 # resolution tiles: 30 * 17
+# resolution pixels: 480 * 270
 
 WIDTH = 1920
 HEIGHT = 1080
@@ -31,16 +31,7 @@ BLACK = pyg.Color(0, 0, 0)
 pyg.init()
 screen = pyg.display.set_mode((WIDTH, HEIGHT))
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
-# surf_all = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
-# surf_fg = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
-# surf_mg = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
-# surf_bg = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
 camera_scroll = vectors.Vec([0, 0])
-# all_surfaces_group = drawer.SurfGroup()
-
-# all_surfaces_group.add(surf_bg, 0)
-# all_surfaces_group.add(surf_mg, 1)
-# all_surfaces_group.add(surf_fg, 2)
 
 main_clock = pyg.time.Clock()
 delta_time = 0
@@ -49,7 +40,7 @@ tilemap = [
     [0, 0, 0, 0, 0, 4, 5, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 8, 9, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 8, 9, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 12, 13, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 12, 13, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
@@ -66,7 +57,7 @@ tilemap = [
 ]
 
 path = os.getcwd()
-tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap-ting.png'))
+tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap.png')).convert_alpha()
 
 tileset_width = int(tileset_image.get_width() / 16)
 tileset_height = int(tileset_image.get_height() / 16)
@@ -80,12 +71,11 @@ for i in range(tileset_width * tileset_height):
 
 test_arr = [0] * tileset_width * tileset_height
 
-tile_rects = []
-
 for i in range(tileset_height):
     for j in range(tileset_width):
         tileset[4 * i + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
 
+bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png')).convert_alpha()
 
 # --------------------------------------------------
 
@@ -246,10 +236,12 @@ while running:
     
     tile_rects = []
 
+    surf.blit(bg_img, (0, 0))
+
     for i in range(len(tilemap)):
         for j in range(len(tilemap[i])):
-            surf.blit(tileset[tilemap[i][j]], (16 * j, 16 * i))
             if tilemap[i][j] != 0:
+                surf.blit(tileset[tilemap[i][j]], (16 * j, 16 * i))
                 pyg.draw.rect(surf, BLUE, pyg.Rect(16 * j, 16 * i, 16, 16), 1)
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
 
