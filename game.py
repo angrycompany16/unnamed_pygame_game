@@ -3,6 +3,7 @@ import pygame as pyg
 import vectors
 import os
 import enum
+import drawer
 
 # ------------------ CONSTANTS ---------------------
 # resolution tiles: 30 * 17
@@ -30,9 +31,16 @@ BLACK = pyg.Color(0, 0, 0)
 pyg.init()
 screen = pyg.display.set_mode((WIDTH, HEIGHT))
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
+# surf_all = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
+# surf_fg = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
+# surf_mg = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
+# surf_bg = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
 camera_scroll = vectors.Vec([0, 0])
+# all_surfaces_group = drawer.SurfGroup()
 
-moving_sprites = pyg.sprite.Group()
+# all_surfaces_group.add(surf_bg, 0)
+# all_surfaces_group.add(surf_mg, 1)
+# all_surfaces_group.add(surf_fg, 2)
 
 main_clock = pyg.time.Clock()
 delta_time = 0
@@ -111,6 +119,32 @@ def GetAxis(axis) -> int:
 
 # --------------------------------------------------
 
+# I literally never want to touch this code ever again
+# But hey, at least it works
+class Gun():
+    def __init__(self, image):
+        self.image = image
+        self.angle = 0
+
+    def look_at(self, pos, target):
+        new_angle = 0
+
+        center = vectors.Vec([WIDTH / (2 * PIXEL_SCALE_FACTOR), HEIGHT / (2 * PIXEL_SCALE_FACTOR)])
+
+        dist_x = target[0] - center[0]
+        dist_y = center[1] - target[1]
+
+        if target[0] != 0:
+            new_angle = 180 * -math.atan2(dist_x, dist_y) / math.pi
+
+        rot_sprite = pyg.transform.rotate(self.image, (new_angle - 90))
+        new_rect = rot_sprite.get_rect(center = pos)
+
+        pyg.draw.rect(surf, RED, new_rect, 1)
+        surf.blit(rot_sprite, new_rect)
+
+        self.angle = new_angle
+
 
 class PhysicsObject():
     def __init__(self, position, velocity, acceleration, gravity = True):
@@ -129,12 +163,11 @@ class PhysicsObject():
         return self.position
 
 
-class Player(pyg.sprite.Sprite):
-    def __init__(self, player_physics, image, move_speed = MOVE_SPEED):
-        pyg.sprite.Sprite.__init__(self)
-
+class Player():
+    def __init__(self, player_physics, image, gun, move_speed = MOVE_SPEED):
         self.player_physics = player_physics
         self.image = image
+        self.gun = gun
         self.rect = pyg.Rect(
             player_physics.position, 
             (image.get_width(), image.get_height())
@@ -148,8 +181,6 @@ class Player(pyg.sprite.Sprite):
             'right': False,
             'left': True
         }
-
-        moving_sprites.add(self)
 
     def check_collision(self, old_pos, new_pos) -> vectors.Vec:
         dp = new_pos - old_pos
@@ -184,6 +215,7 @@ class Player(pyg.sprite.Sprite):
         self.player_physics.position = new_pos
         self.rect.x = new_pos[0]
         self.rect.y = new_pos[1]
+        surf.blit(self.image, (self.rect.x, self.rect.y))
 
 
 player = Player(
@@ -192,7 +224,8 @@ player = Player(
         vectors.Vec([0, 0]),
         vectors.Vec([0, 0])
     ),
-    pyg.image.load(os.path.join('Sprites', 'character.png'))
+    pyg.image.load(os.path.join('Sprites', 'character.png')),
+    Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')))
 )
 
 def update_physics():
@@ -204,14 +237,13 @@ def update_physics():
 
 running = True
 while running:
-    screen.fill(BLACK)
+    # screen.fill(BLACK)
+    # all_surfaces_group.fill(BLACK)
     player.player_physics.velocity[0] = GetAxis(Axis.X) * player.move_speed
 
-    player.update()
-
-    camera_scroll[0] += player.player_physics.position[0] * PIXEL_SCALE_FACTOR - camera_scroll[0] - WIDTH / 2
-    camera_scroll[1] += player.player_physics.position[1] * PIXEL_SCALE_FACTOR - camera_scroll[1] - HEIGHT / 2
-
+    camera_scroll[0] = player.player_physics.position[0] * PIXEL_SCALE_FACTOR - WIDTH / 2
+    camera_scroll[1] = player.player_physics.position[1] * PIXEL_SCALE_FACTOR - HEIGHT / 2
+    
     tile_rects = []
 
     for i in range(len(tilemap)):
@@ -221,9 +253,12 @@ while running:
                 pyg.draw.rect(surf, BLUE, pyg.Rect(16 * j, 16 * i, 16, 16), 1)
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
 
+    player.update()
+    # player.gun.look_at(player.player_physics.position, vectors.Vec([0, 50]))
+    mouse_pos = pyg.mouse.get_pos()
 
-    moving_sprites.update()
-    moving_sprites.draw(surf)
+    player.gun.look_at(player.player_physics.position, (mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
+    print(mouse_pos)
 
     screen.blit(pyg.transform.scale(
             surf, 
