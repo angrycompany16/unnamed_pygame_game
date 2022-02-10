@@ -4,7 +4,8 @@ import vectors
 import os
 import enum
 
-# ------------------ CONSTANTS ---------------------
+
+#region CONSTANTS
 # resolution tiles: 30 * 17
 # resolution pixels: 480 * 270
 
@@ -22,10 +23,10 @@ BLUE = pyg.Color(0, 0, 255)
 BLACK = pyg.Color(0, 0, 0)
 
 
-# --------------------------------------------------
+#endregion
 
 
-# --------- INITIALIZATION & VARIABLES -------------
+#region INITIALIZATION & VARIABLES
 
 
 pyg.init()
@@ -77,11 +78,12 @@ for i in range(tileset_height):
 
 bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png')).convert_alpha()
 
-# --------------------------------------------------
+bullets = []
+
+#endregion
 
 
-# ----------------- INPUT & OUTPUT -----------------
-
+#region INPUT STUFF
 
 class Axis(enum.Enum):
     X = 1
@@ -106,15 +108,31 @@ def GetAxis(axis) -> int:
     else:
         print("{} is not a valid axis!".format(axis))
 
+#endregion
 
-# --------------------------------------------------
 
+#region PLAYER
 # I literally never want to touch this code ever again
 # But hey, at least it works
+class Bullet():
+    def __init__(self, position, velocity, image, angle):
+        self.position = position
+        self.velocity = velocity
+        self.angle = angle
+        self.image = pyg.transform.rotate(image, angle)
+        self.rect = pyg.Rect((position), (image.get_width(), image.get_height()))
+
+    def update(self):
+        self.position += self.velocity * delta_time
+        self.rect.x = self.position[0]
+        self.rect.y = self.position[1]
+        surf.blit(self.image, self.rect.x, self.rect.y)
+
 class Gun():
     def __init__(self, image):
         self.image = image
         self.angle = 0
+        self.flipped = False
 
     def look_at(self, pos, target):
         new_angle = 0
@@ -125,15 +143,29 @@ class Gun():
         dist_y = center[1] - target[1]
 
         if target[0] != 0:
-            new_angle = 180 * -math.atan2(dist_x, dist_y) / math.pi
+            new_angle = 180 * -math.atan2(dist_x, dist_y) / math.pi - 90
 
-        rot_sprite = pyg.transform.rotate(self.image, (new_angle - 90))
+        if dist_x < 0:
+            if self.flipped:
+                self.flip_y(False)
+        elif dist_x >= 0:
+            if not self.flipped:
+                self.flip_y(True)
+
+        rot_sprite = pyg.transform.rotate(self.image, (new_angle))
         new_rect = rot_sprite.get_rect(center = pos)
 
         pyg.draw.rect(surf, RED, new_rect, 1)
         surf.blit(rot_sprite, new_rect)
 
         self.angle = new_angle
+
+    def flip_y(self, set_flipped):
+        flipped = pyg.transform.flip(self.image, False, True)
+        self.image = flipped
+
+        self.flipped = set_flipped
+
 
 
 class PhysicsObject():
@@ -207,6 +239,9 @@ class Player():
         self.rect.y = new_pos[1]
         surf.blit(self.image, (self.rect.x, self.rect.y))
 
+    def shoot(self):
+        # Calculate velocity and the  rest of the arguments
+        bullet = Bullet(self.player_physics.position, )
 
 player = Player(
     PhysicsObject(
@@ -218,17 +253,15 @@ player = Player(
     Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')))
 )
 
-def update_physics():
-    player.player_physics.calculate_movement()
+#endregion
 
 
-# ------------------ GAME LOOP ---------------------
+#region GAME LOOP
 
 
 running = True
 while running:
-    # screen.fill(BLACK)
-    # all_surfaces_group.fill(BLACK)
+    screen.fill(BLACK)
     player.player_physics.velocity[0] = GetAxis(Axis.X) * player.move_speed
 
     camera_scroll[0] = player.player_physics.position[0] * PIXEL_SCALE_FACTOR - WIDTH / 2
@@ -242,16 +275,15 @@ while running:
         for j in range(len(tilemap[i])):
             if tilemap[i][j] != 0:
                 surf.blit(tileset[tilemap[i][j]], (16 * j, 16 * i))
-                pyg.draw.rect(surf, BLUE, pyg.Rect(16 * j, 16 * i, 16, 16), 1)
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
 
     player.update()
-    # player.gun.look_at(player.player_physics.position, vectors.Vec([0, 50]))
     mouse_pos = pyg.mouse.get_pos()
 
-    player.gun.look_at(player.player_physics.position, (mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
-    print(mouse_pos)
-
+    player.gun.look_at((player.player_physics.position[0] + player.image.get_width() / 2,
+    player.player_physics.position[1] + player.image.get_height() / 2), 
+    (mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
+    
     screen.blit(pyg.transform.scale(
             surf, 
             (WIDTH, HEIGHT)
@@ -277,6 +309,4 @@ while running:
             and player.player_physics.velocity[1] < 0):
                 player.player_physics.velocity[1] = RELEASE_FALL_SPEED
 
-
-
-# --------------------------------------------------
+#endregion
