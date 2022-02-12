@@ -1,9 +1,5 @@
-import math
+import math, vectors, os, enum, game_debugger, UI
 import pygame as pyg
-import vectors
-import os
-import enum
-
 
 #region CONSTANTS
 # resolution tiles: 30 * 17
@@ -15,6 +11,7 @@ JUMP_SPEED = 130
 MOVE_SPEED = 50
 GRAVITY_MULTIPLIER = 10
 RELEASE_FALL_SPEED = 10
+BULLET_SPEED = 30
 
 
 PIXEL_SCALE_FACTOR = 4
@@ -80,6 +77,9 @@ bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png')).convert
 
 bullets = []
 
+debug_screen = game_debugger.DebugPanel(vectors.Vec([WIDTH, 80]), vectors.Vec([0, 0]))
+debug_text = debug_screen.input_box
+
 #endregion
 
 
@@ -123,10 +123,10 @@ class Bullet():
         self.rect = pyg.Rect((position), (image.get_width(), image.get_height()))
 
     def update(self):
-        self.position += self.velocity * delta_time
+        self.position += self.velocity * delta_time * BULLET_SPEED
         self.rect.x = self.position[0]
         self.rect.y = self.position[1]
-        surf.blit(self.image, self.rect.x, self.rect.y)
+        surf.blit(self.image, (self.rect.x, self.rect.y))
 
 class Gun():
     def __init__(self, image):
@@ -241,7 +241,20 @@ class Player():
 
     def shoot(self):
         # Calculate velocity and the  rest of the arguments
-        bullet = Bullet(self.player_physics.position, )
+        bullet = Bullet(
+            vectors.Vec([
+                player.player_physics.position[0] + player.rect.width / 2,
+                player.player_physics.position[1] + player.rect.height / 2
+            ]),
+            vectors.Vec([
+                -math.cos((self.gun.angle) * math.pi / 180),
+                math.sin((self.gun.angle) * math.pi / 180)
+            ]),
+            pyg.image.load(os.path.join('Sprites', 'bullet.png')),
+            self.gun.angle
+        )
+
+        bullets.append(bullet)
 
 player = Player(
     PhysicsObject(
@@ -277,12 +290,16 @@ while running:
                 surf.blit(tileset[tilemap[i][j]], (16 * j, 16 * i))
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
 
+    for bullet in bullets:
+        bullet.update()
+
     player.update()
     mouse_pos = pyg.mouse.get_pos()
 
     player.gun.look_at((player.player_physics.position[0] + player.image.get_width() / 2,
     player.player_physics.position[1] + player.image.get_height() / 2), 
     (mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
+    
     
     screen.blit(pyg.transform.scale(
             surf, 
@@ -291,6 +308,8 @@ while running:
         (-camera_scroll[0], -camera_scroll[1])
     )
 
+    debug_screen.update(screen)
+
     pyg.display.update()
 
     delta_time = main_clock.tick() / 1000
@@ -298,15 +317,38 @@ while running:
     for event in pyg.event.get():
         if event.type == pyg.QUIT:
             running = False
+            # debug_game.reset_all()
             pyg.quit()
         if event.type == pyg.KEYDOWN:
-            if event.key == pyg.K_SPACE and player.on_ground:
-                player.on_ground = False
-                player.player_physics.velocity[1] = -JUMP_SPEED
+            if debug_text.active:
+                if event.key == pyg.K_BACKSPACE:
+                    debug_text.text = debug_text.text[:-1]
+                    print(debug_text.text)
+                elif event.key == pyg.K_RETURN:
+                    changed = debug_screen.parse_input()
+                    exec("%s = %d" % changed)
+                else:
+                    debug_text.text += event.unicode
+
+                debug_text.update_text()
+            else:
+                if event.key == pyg.K_SPACE and player.on_ground:
+                    player.on_ground = False
+                    player.player_physics.velocity[1] = -JUMP_SPEED
+
         if event.type == pyg.KEYUP:
             if (event.key == pyg.K_SPACE 
             and not player.on_ground 
             and player.player_physics.velocity[1] < 0):
                 player.player_physics.velocity[1] = RELEASE_FALL_SPEED
+        if event.type == pyg.MOUSEBUTTONDOWN:
+            if event.button == 1: # 1 is left mouse button
+                if debug_text.rect.collidepoint(event.pos):
+                    debug_text.active = True
+                else:
+                    debug_text.active = False
+                    player.shoot()
 
+                
+        
 #endregion
