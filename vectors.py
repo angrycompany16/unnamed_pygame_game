@@ -93,3 +93,15 @@ class Vec():
 
     def operator_type_error(self, operator, type1, type2):
         raise TypeError("unsupported operand type(s) for {}: '{}' and '{}'".format(operator, type1, type2))
+
+    def list(self):
+        return self.vector
+
+# Contains some static math methods i like
+class Math():
+    def __init__():
+        pass
+
+    @staticmethod
+    def clamp(num, min_val, max_val):
+       return max(min(num, max_val), min_val)

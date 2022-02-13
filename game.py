@@ -1,35 +1,46 @@
-import math, vectors, os, enum, game_debugger, UI
+import math, vectors, os, enum, game_debugger
 import pygame as pyg
 
 #region CONSTANTS
 # resolution tiles: 30 * 17
 # resolution pixels: 480 * 270
 
+# screeen
 WIDTH = 1920
 HEIGHT = 1080
-JUMP_SPEED = 130
-MOVE_SPEED = 50
-GRAVITY_MULTIPLIER = 10
-RELEASE_FALL_SPEED = 10
-BULLET_SPEED = 30
-
-
 PIXEL_SCALE_FACTOR = 4
+CAMERA_MOVE_SLOWNESS = 20
+# Border_x (left border, right border)
+CAMERA_BORDERS_X = vectors.Vec([0, WIDTH])
+# Border_y (top border, bottom border)
+CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT])
+
+# player stats
+JUMP_SPEED = 300
+MOVE_SPEED = 100
+GRAVITY_MULTIPLIER = 50
+RELEASE_FALL_SPEED = 10
+BULLET_SPEED = 400
+SHOOT_BOUNCE_SPEED = 300
+
+# movement damping
+WALK_DAMPING = 20
+
+# colors
 RED = pyg.Color(255, 0, 0)
 BLUE = pyg.Color(0, 0, 255)
 BLACK = pyg.Color(0, 0, 0)
 
 
+
 #endregion
 
-
 #region INITIALIZATION & VARIABLES
-
 
 pyg.init()
 screen = pyg.display.set_mode((WIDTH, HEIGHT))
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
-camera_scroll = vectors.Vec([0, 0])
+true_camera_scroll = vectors.Vec([0, 0])
 
 main_clock = pyg.time.Clock()
 delta_time = 0
@@ -82,13 +93,11 @@ debug_text = debug_screen.input_box
 
 #endregion
 
-
 #region INPUT STUFF
 
 class Axis(enum.Enum):
     X = 1
     Y = 2
-
 
 def GetAxis(axis) -> int:
     if axis == Axis.X:
@@ -110,7 +119,6 @@ def GetAxis(axis) -> int:
 
 #endregion
 
-
 #region PLAYER
 # I literally never want to touch this code ever again
 # But hey, at least it works
@@ -121,12 +129,18 @@ class Bullet():
         self.angle = angle
         self.image = pyg.transform.rotate(image, angle)
         self.rect = pyg.Rect((position), (image.get_width(), image.get_height()))
+        self.lifetime = 0
 
     def update(self):
         self.position += self.velocity * delta_time * BULLET_SPEED
         self.rect.x = self.position[0]
         self.rect.y = self.position[1]
         surf.blit(self.image, (self.rect.x, self.rect.y))
+        self.lifetime += delta_time
+
+    def check_collision(self, other_rect) -> bool:
+        if pyg.Rect.colliderect(self.rect, other_rect):
+            self.kill()
 
 class Gun():
     def __init__(self, image):
@@ -137,10 +151,8 @@ class Gun():
     def look_at(self, pos, target):
         new_angle = 0
 
-        center = vectors.Vec([WIDTH / (2 * PIXEL_SCALE_FACTOR), HEIGHT / (2 * PIXEL_SCALE_FACTOR)])
-
-        dist_x = target[0] - center[0]
-        dist_y = center[1] - target[1]
+        dist_x = target[0] - pos[0]
+        dist_y = pos[1] - target[1]
 
         if target[0] != 0:
             new_angle = 180 * -math.atan2(dist_x, dist_y) / math.pi - 90
@@ -166,8 +178,6 @@ class Gun():
 
         self.flipped = set_flipped
 
-
-
 class PhysicsObject():
     def __init__(self, position, velocity, acceleration, gravity = True):
         self.position = position
@@ -179,14 +189,13 @@ class PhysicsObject():
 
 
     def calculate_movement(self):
-        self.velocity += self.acceleration * delta_time
+        self.velocity += vectors.Vec([0, 9.81 * GRAVITY_MULTIPLIER]) * delta_time
         self.position += self.velocity * delta_time
 
         return self.position
 
-
 class Player():
-    def __init__(self, player_physics, image, gun, move_speed = MOVE_SPEED):
+    def __init__(self, player_physics, image, gun):
         self.player_physics = player_physics
         self.image = image
         self.gun = gun
@@ -194,7 +203,6 @@ class Player():
             player_physics.position, 
             (image.get_width(), image.get_height())
         )
-        self.move_speed = move_speed
         self.on_ground = False
 
         self.collision_types = { 
@@ -217,7 +225,7 @@ class Player():
                 # check if below ground / jumping
                 if self.player_physics.velocity[1] < 0:
                     dp[1] = tile.bottom - self.rect.top
-                    self.player_physics.velocity[1] = 0
+                    self.player_physics.velocity[1] = -RELEASE_FALL_SPEED
                 # check if above ground / falling
                 elif self.player_physics.velocity[1] > 0:
                     self.on_ground = True
@@ -254,6 +262,9 @@ class Player():
             self.gun.angle
         )
 
+        self.player_physics.velocity[0] = math.cos((self.gun.angle) * math.pi / 180) * SHOOT_BOUNCE_SPEED
+        self.player_physics.velocity[1] = -math.sin((self.gun.angle) * math.pi / 180) * SHOOT_BOUNCE_SPEED
+
         bullets.append(bullet)
 
 player = Player(
@@ -268,18 +279,27 @@ player = Player(
 
 #endregion
 
-
 #region GAME LOOP
-
 
 running = True
 while running:
     screen.fill(BLACK)
-    player.player_physics.velocity[0] = GetAxis(Axis.X) * player.move_speed
+    if not debug_text.active:
+        if player.on_ground:
+            player.player_physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.player_physics.velocity[0]) / WALK_DAMPING
+        elif not player.on_ground:
+            player.player_physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.player_physics.velocity[0]) / WALK_DAMPING
 
-    camera_scroll[0] = player.player_physics.position[0] * PIXEL_SCALE_FACTOR - WIDTH / 2
-    camera_scroll[1] = player.player_physics.position[1] * PIXEL_SCALE_FACTOR - HEIGHT / 2
+    true_camera_scroll[0] += (player.player_physics.position[0] * PIXEL_SCALE_FACTOR - true_camera_scroll[0] - WIDTH / 2) / CAMERA_MOVE_SLOWNESS
+    true_camera_scroll[1] += (player.player_physics.position[1] * PIXEL_SCALE_FACTOR - true_camera_scroll[1]- HEIGHT / 2) / CAMERA_MOVE_SLOWNESS
     
+    # turn the camera scroll value to integer. Helps with bugs apparently
+    rounded_camera_scroll = list(map(lambda x: int(x), true_camera_scroll))
+
+    # basically just clamps the venter point between specified values
+    rounded_camera_scroll[0] = vectors.Math.clamp(rounded_camera_scroll[0], CAMERA_BORDERS_X[0],  CAMERA_BORDERS_X[1] - WIDTH)
+    rounded_camera_scroll[1] = vectors.Math.clamp(rounded_camera_scroll[1], CAMERA_BORDERS_X[0],  CAMERA_BORDERS_X[1] - HEIGHT)
+
     tile_rects = []
 
     surf.blit(bg_img, (0, 0))
@@ -290,22 +310,35 @@ while running:
                 surf.blit(tileset[tilemap[i][j]], (16 * j, 16 * i))
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
 
+    # this can be optimized by calculating the trajectory of the bullet and only checking the rects that overlap, since the bullets move in a straight line
+    # collision with enemies will be implemented in the same way
     for bullet in bullets:
         bullet.update()
+        for tile in tile_rects:
+            if pyg.Rect.colliderect(bullet.rect, tile) and bullet in bullets:
+                bullets.remove(bullet)
+            elif bullet.lifetime > 3 and bullet in bullets:
+                bullets.remove(bullet)
 
     player.update()
     mouse_pos = pyg.mouse.get_pos()
 
-    player.gun.look_at((player.player_physics.position[0] + player.image.get_width() / 2,
-    player.player_physics.position[1] + player.image.get_height() / 2), 
-    (mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
-    
+    player.gun.look_at(
+        (
+            player.player_physics.position[0] + player.image.get_width() / 2,
+            player.player_physics.position[1] + player.image.get_height() / 2
+        ), 
+        (
+            mouse_pos[0] / PIXEL_SCALE_FACTOR, 
+            mouse_pos[1] / PIXEL_SCALE_FACTOR
+        )
+    )
     
     screen.blit(pyg.transform.scale(
             surf, 
             (WIDTH, HEIGHT)
         ), 
-        (-camera_scroll[0], -camera_scroll[1])
+        ((-rounded_camera_scroll[0]), -rounded_camera_scroll[1])
     )
 
     debug_screen.update(screen)
@@ -323,10 +356,12 @@ while running:
             if debug_text.active:
                 if event.key == pyg.K_BACKSPACE:
                     debug_text.text = debug_text.text[:-1]
-                    print(debug_text.text)
                 elif event.key == pyg.K_RETURN:
                     changed = debug_screen.parse_input()
-                    exec("%s = %d" % changed)
+                    if changed != ():
+                        exec("%s = %d" % changed)
+
+                    debug_text.active = False
                 else:
                     debug_text.text += event.unicode
 
@@ -348,7 +383,4 @@ while running:
                 else:
                     debug_text.active = False
                     player.shoot()
-
-                
-        
 #endregion
