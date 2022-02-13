@@ -11,7 +11,7 @@ HEIGHT = 1080
 PIXEL_SCALE_FACTOR = 4
 CAMERA_MOVE_SLOWNESS = 20
 # Border_x (left border, right border)
-CAMERA_BORDERS_X = vectors.Vec([0, WIDTH])
+CAMERA_BORDERS_X = vectors.Vec([0, WIDTH + 1000])
 # Border_y (top border, bottom border)
 CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT])
 
@@ -41,6 +41,7 @@ pyg.init()
 screen = pyg.display.set_mode((WIDTH, HEIGHT))
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
 true_camera_scroll = vectors.Vec([0, 0])
+rounded_camera_scroll = vectors.Vec([0, 0])
 
 main_clock = pyg.time.Clock()
 delta_time = 0
@@ -51,9 +52,9 @@ tilemap = [
     [0, 0, 0, 0, 0, 8, 9, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 12, 13, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
     [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
@@ -135,7 +136,7 @@ class Bullet():
         self.position += self.velocity * delta_time * BULLET_SPEED
         self.rect.x = self.position[0]
         self.rect.y = self.position[1]
-        surf.blit(self.image, (self.rect.x, self.rect.y))
+        surf.blit(self.image, (self.rect.x - rounded_camera_scroll[0], self.rect.y - rounded_camera_scroll[1]))
         self.lifetime += delta_time
 
     def check_collision(self, other_rect) -> bool:
@@ -167,8 +168,8 @@ class Gun():
         rot_sprite = pyg.transform.rotate(self.image, (new_angle))
         new_rect = rot_sprite.get_rect(center = pos)
 
-        pyg.draw.rect(surf, RED, new_rect, 1)
-        surf.blit(rot_sprite, new_rect)
+        pyg.draw.rect(surf, RED, pyg.Rect(new_rect.x -rounded_camera_scroll[0], new_rect.y -rounded_camera_scroll[1], new_rect.w, new_rect.h), 1)
+        surf.blit(rot_sprite, (new_rect.x  - rounded_camera_scroll[0], new_rect.y - rounded_camera_scroll[1]))
 
         self.angle = new_angle
 
@@ -236,16 +237,17 @@ class Player():
         return old_pos
 
     def update(self):
-        old_pos = player.player_physics.position
+        old_pos = self.player_physics.position
         max_new_pos = self.player_physics.calculate_movement()
 
         new_pos = self.check_collision(old_pos, max_new_pos)
 
-        pyg.draw.rect(surf, RED, player.rect, 1)
+        pyg.draw.rect(surf, RED, (self.rect.x - rounded_camera_scroll[0], self.rect.y -rounded_camera_scroll[1], self.rect.w, self.rect.h), 1)
         self.player_physics.position = new_pos
         self.rect.x = new_pos[0]
         self.rect.y = new_pos[1]
-        surf.blit(self.image, (self.rect.x, self.rect.y))
+
+        surf.blit(self.image, (self.rect.x - rounded_camera_scroll[0], self.rect.y - rounded_camera_scroll[1]))
 
     def shoot(self):
         # Calculate velocity and the  rest of the arguments
@@ -291,23 +293,26 @@ while running:
             player.player_physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.player_physics.velocity[0]) / WALK_DAMPING
 
     true_camera_scroll[0] += (player.player_physics.position[0] * PIXEL_SCALE_FACTOR - true_camera_scroll[0] - WIDTH / 2) / CAMERA_MOVE_SLOWNESS
-    true_camera_scroll[1] += (player.player_physics.position[1] * PIXEL_SCALE_FACTOR - true_camera_scroll[1]- HEIGHT / 2) / CAMERA_MOVE_SLOWNESS
+    true_camera_scroll[1] += (player.player_physics.position[1] * PIXEL_SCALE_FACTOR - true_camera_scroll[1] - HEIGHT / 2) / CAMERA_MOVE_SLOWNESS
     
     # turn the camera scroll value to integer. Helps with bugs apparently
-    rounded_camera_scroll = list(map(lambda x: int(x), true_camera_scroll))
+    rounded_camera_scroll = list(map(lambda x: int(x / PIXEL_SCALE_FACTOR), true_camera_scroll))
 
     # basically just clamps the venter point between specified values
     rounded_camera_scroll[0] = vectors.Math.clamp(rounded_camera_scroll[0], CAMERA_BORDERS_X[0],  CAMERA_BORDERS_X[1] - WIDTH)
-    rounded_camera_scroll[1] = vectors.Math.clamp(rounded_camera_scroll[1], CAMERA_BORDERS_X[0],  CAMERA_BORDERS_X[1] - HEIGHT)
+    rounded_camera_scroll[1] = vectors.Math.clamp(rounded_camera_scroll[1], CAMERA_BORDERS_Y[0],  CAMERA_BORDERS_Y[1] - HEIGHT)
 
     tile_rects = []
 
-    surf.blit(bg_img, (0, 0))
+    surf.blit(bg_img,  (-rounded_camera_scroll[0], -rounded_camera_scroll[1]))
 
     for i in range(len(tilemap)):
         for j in range(len(tilemap[i])):
             if tilemap[i][j] != 0:
-                surf.blit(tileset[tilemap[i][j]], (16 * j, 16 * i))
+                surf.blit(tileset[tilemap[i][j]], (
+                    16 * j - rounded_camera_scroll[0], 
+                    16 * i - rounded_camera_scroll[1])
+                )
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
 
     # this can be optimized by calculating the trajectory of the bullet and only checking the rects that overlap, since the bullets move in a straight line
@@ -338,7 +343,7 @@ while running:
             surf, 
             (WIDTH, HEIGHT)
         ), 
-        ((-rounded_camera_scroll[0]), -rounded_camera_scroll[1])
+        (0, 0)
     )
 
     debug_screen.update(screen)
