@@ -2,7 +2,7 @@ import math, vectors, os, enum, game_debugger, world_gen
 import pygame as pyg
 
 #region CONSTANTS
-# resolution tiles: 30 * 17
+# resolution tiles: 60 * 51
 # resolution pixels: 480 * 270
 
 # screeen
@@ -11,9 +11,9 @@ HEIGHT = 1080
 PIXEL_SCALE_FACTOR = 4
 CAMERA_MOVE_SLOWNESS = 20
 # Border_x (left border, right border)
-CAMERA_BORDERS_X = vectors.Vec([0, WIDTH])
+CAMERA_BORDERS_X = vectors.Vec([0, WIDTH * 2 / PIXEL_SCALE_FACTOR])
 # Border_y (top border, bottom border)
-CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT])
+CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT * 3 / PIXEL_SCALE_FACTOR])
 
 # player stats
 JUMP_SPEED = 300
@@ -47,28 +47,8 @@ delta_time = 0
 foo = world_gen.RoomLayout(20, 20)
 foo.create_rooms()
 
-bar = world_gen.Room()
-bar.generate_tiles()
-
-tilemap = [
-    [0, 0, 0, 0, 0, 4, 5, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 8, 9, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 8, 9, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 12, 13, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-    [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
-]
+# resolution tiles: 60 * 51
+room = world_gen.Island(60, 51, [30, 23], 56, 21, 500)
 
 path = os.getcwd()
 tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap.png')).convert_alpha()
@@ -87,7 +67,7 @@ test_arr = [0] * tileset_width * tileset_height
 
 for i in range(tileset_height):
     for j in range(tileset_width):
-        tileset[4 * i + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
+        tileset[3 * i + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
 
 bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png')).convert_alpha()
 
@@ -230,7 +210,7 @@ class Player():
                 # check if below ground / jumping
                 if self.player_physics.velocity[1] < 0:
                     dp[1] = tile.bottom - self.rect.top
-                    self.player_physics.velocity[1] = -RELEASE_FALL_SPEED
+                    self.player_physics.velocity[1] = RELEASE_FALL_SPEED
                 # check if above ground / falling
                 elif self.player_physics.velocity[1] > 0:
                     self.on_ground = True
@@ -275,7 +255,7 @@ class Player():
 
 player = Player(
     PhysicsObject(
-        vectors.Vec([32, 32]),
+        vectors.Vec([100, 0]),
         vectors.Vec([0, 0]),
         vectors.Vec([0, 0])
     ),
@@ -310,10 +290,10 @@ while running:
 
     surf.blit(bg_img,  (-rounded_camera_scroll[0], -rounded_camera_scroll[1]))
 
-    for i in range(len(tilemap)):
-        for j in range(len(tilemap[i])):
-            if tilemap[i][j] != 0:
-                surf.blit(tileset[tilemap[i][j]], (
+    for i in range(len(room.tilemap)):
+        for j in range(len(room.tilemap[i])):
+            if room.tilemap[i][j] != 0:
+                surf.blit(tileset[room.tilemap[i][j]], (
                     16 * j - rounded_camera_scroll[0], 
                     16 * i - rounded_camera_scroll[1])
                 )

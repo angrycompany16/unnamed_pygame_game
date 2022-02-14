@@ -2,6 +2,7 @@ import numpy as np
 import pygame as pyg
 import random
 import noise
+import math
 
 # create a tilemap that just contains random noise
 class RoomLayout():
@@ -33,7 +34,7 @@ class RoomLayout():
             activetile = self.step(activetile)
 
         # for tile in self.tilemap:
-            # print(tile)
+        #     print(tile)
 
     def step(self, tile):
         # gets neighbours
@@ -62,14 +63,20 @@ class RoomLayout():
 
         return neighbours
 
-class Room():
-    def __init__(self):
+class Island():
+    def __init__(self, width, height, center, max_radius_x, max_radius_y, probability_factor):
         self.tilemap = []
-        
-        for i in range(30):
+        self.center = center
+        self.max_radius_x = max_radius_x
+        self.max_radius_y = max_radius_y
+        self.probability_factor = probability_factor
+        for i in range(height):
             self.tilemap.append([])
-            for j in range(17):
+            for j in range(width):
                 self.tilemap[i].append(0)
+
+
+        self.generate_tiles()
 
     def generate_tiles(self):
         random_seed = np.random.random() * 1000
@@ -77,6 +84,18 @@ class Room():
         #TODO - make perlin noise actually generate an island instead of noise
         for i in range(len(self.tilemap)):
             for j in range(len(self.tilemap[i])):
-                self.tilemap[i][j] = round((1 + noise.snoise2(i, j)) / 2)
+                dist_x = math.pow(self.center[0] - j, 2) + 0.1
+                dist_y = math.pow(self.center[1] - i, 2) + 0.1
+                
+                prob = self.probability_factor / (dist_y + dist_x)
+                # print(prob)
+                
+                if dist_x > math.pow(self.max_radius_x, 2):
+                    prob = 0
+                if dist_y > math.pow(self.max_radius_y, 2):
+                    prob = 0
+
+                if prob > 1:
+                    self.tilemap[i][j] = round((1 + noise.snoise2(i + random_seed, j + random_seed)) / 2)
     
-            print(self.tilemap[i])
+            # print(self.tilemap[i])
