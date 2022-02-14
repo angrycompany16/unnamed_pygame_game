@@ -1,4 +1,4 @@
-import math, vectors, os, enum, game_debugger
+import math, vectors, os, enum, game_debugger, world_gen
 import pygame as pyg
 
 #region CONSTANTS
@@ -11,7 +11,7 @@ HEIGHT = 1080
 PIXEL_SCALE_FACTOR = 4
 CAMERA_MOVE_SLOWNESS = 20
 # Border_x (left border, right border)
-CAMERA_BORDERS_X = vectors.Vec([0, WIDTH + 1000])
+CAMERA_BORDERS_X = vectors.Vec([0, WIDTH])
 # Border_y (top border, bottom border)
 CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT])
 
@@ -31,8 +31,6 @@ RED = pyg.Color(255, 0, 0)
 BLUE = pyg.Color(0, 0, 255)
 BLACK = pyg.Color(0, 0, 0)
 
-
-
 #endregion
 
 #region INITIALIZATION & VARIABLES
@@ -45,6 +43,12 @@ rounded_camera_scroll = vectors.Vec([0, 0])
 
 main_clock = pyg.time.Clock()
 delta_time = 0
+
+foo = world_gen.RoomLayout(20, 20)
+foo.create_rooms()
+
+bar = world_gen.Room()
+bar.generate_tiles()
 
 tilemap = [
     [0, 0, 0, 0, 0, 4, 5, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -152,8 +156,8 @@ class Gun():
     def look_at(self, pos, target):
         new_angle = 0
 
-        dist_x = target[0] - pos[0]
-        dist_y = pos[1] - target[1]
+        dist_x = target[0] - (pos[0] - rounded_camera_scroll[0])
+        dist_y = (pos[1] - rounded_camera_scroll[1]) - target[1]
 
         if target[0] != 0:
             new_angle = 180 * -math.atan2(dist_x, dist_y) / math.pi - 90
