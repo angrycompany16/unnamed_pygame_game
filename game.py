@@ -11,9 +11,9 @@ HEIGHT = 1080
 PIXEL_SCALE_FACTOR = 4
 CAMERA_MOVE_SLOWNESS = 20
 # Border_x (left border, right border)
-CAMERA_BORDERS_X = vectors.Vec([0, WIDTH * 2 / PIXEL_SCALE_FACTOR])
+CAMERA_BORDERS_X = vectors.Vec([0, WIDTH + WIDTH / PIXEL_SCALE_FACTOR])
 # Border_y (top border, bottom border)
-CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT * 3 / PIXEL_SCALE_FACTOR])
+CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT + 2 * HEIGHT / PIXEL_SCALE_FACTOR])
 
 # player stats
 JUMP_SPEED = 300
@@ -180,12 +180,12 @@ class PhysicsObject():
         return self.position
 
 class Player():
-    def __init__(self, player_physics, image, gun):
-        self.player_physics = player_physics
+    def __init__(self, physics, image, gun):
+        self.physics = physics
         self.image = image
         self.gun = gun
         self.rect = pyg.Rect(
-            player_physics.position, 
+            physics.position, 
             (image.get_width(), image.get_height())
         )
         self.on_ground = False
@@ -208,26 +208,26 @@ class Player():
             # check for collision in y direction
             if tile.colliderect(pyg.Rect(old_pos[0], new_pos[1], self.rect.width, self.rect.height)):
                 # check if below ground / jumping
-                if self.player_physics.velocity[1] < 0:
+                if self.physics.velocity[1] < 0:
                     dp[1] = tile.bottom - self.rect.top
-                    self.player_physics.velocity[1] = RELEASE_FALL_SPEED
+                    self.physics.velocity[1] = RELEASE_FALL_SPEED
                 # check if above ground / falling
-                elif self.player_physics.velocity[1] > 0:
+                elif self.physics.velocity[1] > 0:
                     self.on_ground = True
                     dp[1] = tile.top - self.rect.bottom
-                    self.player_physics.velocity[1] = 0
+                    self.physics.velocity[1] = 0
 
         old_pos += dp
         return old_pos
 
     def update(self):
-        old_pos = self.player_physics.position
-        max_new_pos = self.player_physics.calculate_movement()
+        old_pos = self.physics.position
+        max_new_pos = self.physics.calculate_movement()
 
         new_pos = self.check_collision(old_pos, max_new_pos)
 
         pyg.draw.rect(surf, RED, (self.rect.x - rounded_camera_scroll[0], self.rect.y -rounded_camera_scroll[1], self.rect.w, self.rect.h), 1)
-        self.player_physics.position = new_pos
+        self.physics.position = new_pos
         self.rect.x = new_pos[0]
         self.rect.y = new_pos[1]
 
@@ -237,8 +237,8 @@ class Player():
         # Calculate velocity and the  rest of the arguments
         bullet = Bullet(
             vectors.Vec([
-                player.player_physics.position[0] + player.rect.width / 2,
-                player.player_physics.position[1] + player.rect.height / 2
+                player.physics.position[0] + player.rect.width / 2,
+                player.physics.position[1] + player.rect.height / 2
             ]),
             vectors.Vec([
                 -math.cos((self.gun.angle) * math.pi / 180),
@@ -248,8 +248,8 @@ class Player():
             self.gun.angle
         )
 
-        self.player_physics.velocity[0] = math.cos((self.gun.angle) * math.pi / 180) * SHOOT_BOUNCE_SPEED
-        self.player_physics.velocity[1] = -math.sin((self.gun.angle) * math.pi / 180) * SHOOT_BOUNCE_SPEED
+        self.physics.velocity[0] = math.cos((self.gun.angle) * math.pi / 180) * SHOOT_BOUNCE_SPEED
+        self.physics.velocity[1] = -math.sin((self.gun.angle) * math.pi / 180) * SHOOT_BOUNCE_SPEED
 
         bullets.append(bullet)
 
@@ -272,12 +272,12 @@ while running:
     screen.fill(BLACK)
     if not debug_text.active:
         if player.on_ground:
-            player.player_physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.player_physics.velocity[0]) / WALK_DAMPING
+            player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
         elif not player.on_ground:
-            player.player_physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.player_physics.velocity[0]) / WALK_DAMPING
+            player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
 
-    true_camera_scroll[0] += (player.player_physics.position[0] * PIXEL_SCALE_FACTOR - true_camera_scroll[0] - WIDTH / 2) / CAMERA_MOVE_SLOWNESS
-    true_camera_scroll[1] += (player.player_physics.position[1] * PIXEL_SCALE_FACTOR - true_camera_scroll[1] - HEIGHT / 2) / CAMERA_MOVE_SLOWNESS
+    true_camera_scroll[0] += (player.physics.position[0] * PIXEL_SCALE_FACTOR - true_camera_scroll[0] - WIDTH / 2) / CAMERA_MOVE_SLOWNESS
+    true_camera_scroll[1] += (player.physics.position[1] * PIXEL_SCALE_FACTOR - true_camera_scroll[1] - HEIGHT / 2) / CAMERA_MOVE_SLOWNESS
     
     # turn the camera scroll value to integer. Helps with bugs apparently
     rounded_camera_scroll = list(map(lambda x: int(x / PIXEL_SCALE_FACTOR), true_camera_scroll))
@@ -314,8 +314,8 @@ while running:
 
     player.gun.look_at(
         (
-            player.player_physics.position[0] + player.image.get_width() / 2,
-            player.player_physics.position[1] + player.image.get_height() / 2
+            player.physics.position[0] + player.image.get_width() / 2,
+            player.physics.position[1] + player.image.get_height() / 2
         ), 
         (
             mouse_pos[0] / PIXEL_SCALE_FACTOR, 
@@ -358,13 +358,13 @@ while running:
             else:
                 if event.key == pyg.K_SPACE and player.on_ground:
                     player.on_ground = False
-                    player.player_physics.velocity[1] = -JUMP_SPEED
+                    player.physics.velocity[1] = -JUMP_SPEED
 
         if event.type == pyg.KEYUP:
             if (event.key == pyg.K_SPACE 
             and not player.on_ground 
-            and player.player_physics.velocity[1] < 0):
-                player.player_physics.velocity[1] = RELEASE_FALL_SPEED
+            and player.physics.velocity[1] < 0):
+                player.physics.velocity[1] = RELEASE_FALL_SPEED
         if event.type == pyg.MOUSEBUTTONDOWN:
             if event.button == 1: # 1 is left mouse button
                 if debug_text.rect.collidepoint(event.pos):
