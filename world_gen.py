@@ -2,7 +2,9 @@ import numpy as np
 import pygame as pyg
 import random
 import noise
+import copy
 import math
+import vectors
 
 # create a tilemap that just contains random noise
 class RoomLayout():
@@ -67,6 +69,8 @@ class Island():
     def __init__(self, width, height, center, max_radius_x, max_radius_y, probability_factor):
         self.tilemap = []
         self.center = center
+        self.height = height
+        self.width = width
         self.max_radius_x = max_radius_x
         self.max_radius_y = max_radius_y
         self.probability_factor = probability_factor
@@ -75,27 +79,68 @@ class Island():
             for j in range(width):
                 self.tilemap[i].append(0)
 
-
-        self.generate_tiles()
+        for i in range(3):
+            self.generate_tiles()
 
     def generate_tiles(self):
-        random_seed = np.random.random() * 1000
+        random_seed_1 = np.random.random() * 1000
+        random_seed_2 = np.random.random() * 2
 
-        #TODO - make perlin noise actually generate an island instead of noise
+        #TODO - fix world generation
         for i in range(len(self.tilemap)):
             for j in range(len(self.tilemap[i])):
-                dist_x = math.pow(self.center[0] - j, 2) + 0.1
-                dist_y = math.pow(self.center[1] - i, 2) + 0.1
+                # dist_x = math.pow(self.center[0] - j, 2) + 0.1
+                # dist_y = math.pow(self.center[1] - i, 2) + 0.1
                 
-                prob = self.probability_factor / (dist_y + dist_x)
+                # prob = self.probability_factor / (dist_y + dist_x)
                 # print(prob)
                 
-                if dist_x > math.pow(self.max_radius_x, 2):
-                    prob = 0
-                if dist_y > math.pow(self.max_radius_y, 2):
-                    prob = 0
+                # if dist_x > math.pow(self.max_radius_x, 2):
+                #     prob = 0
+                # if dist_y > math.pow(self.max_radius_y, 2):
+                #     prob = 0
 
-                if prob > 1:
-                    self.tilemap[i][j] = round((1 + noise.snoise2(i + random_seed, j + random_seed)) / 2)
+                # if prob > 1:
+                if (1 + noise.snoise2(i + random_seed_1, j + random_seed_1)) * (1+ noise.snoise2(i + random_seed_2, j + random_seed_2)) > 1:
+                    self.tilemap[i][j] = 1
     
             # print(self.tilemap[i])
+        self.tilemap = self.iterate_cellular_automaton()
+
+    def iterate_cellular_automaton(self):
+        tilemap_copy = copy.deepcopy(self.tilemap)
+
+        # i is y value in the tilemap
+        # j is x value in the tilemap
+        for i in range(len(tilemap_copy)):
+            for j in range(len(tilemap_copy[i])):
+                wall_count = 0
+                tiles_checked = 0
+
+                for y in range(i - 1, i + 2):
+                    for x in range(j - 1, j + 2):
+                        if y > 0 and y < self.height - 1:
+                            if x > 0 and x < self.width - 1:
+                                if y != i or x != j:
+                                    if self.tilemap[y][x] == 1:
+                                        tiles_checked += 1  
+                                        wall_count += 1
+
+
+                print(tiles_checked)
+
+                # print(wall_count)
+                # print("----done----")
+                if wall_count > 4:
+                    tilemap_copy[i][j] = 1
+                else:
+                    tilemap_copy[i][j] = 0
+
+        return tilemap_copy
+        # print(self.tilemap)
+        # print("---------------------")
+        # print(tilemap_copy)
+        # Loop through all tiles, and count the number of neighbours
+        # If more than four neighbours are floor, the tile becomes floor
+        # If four or fewer are floor, the tile becomes air
+        # Iterate through these steps many times 

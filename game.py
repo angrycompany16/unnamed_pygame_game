@@ -14,6 +14,8 @@ CAMERA_MOVE_SLOWNESS = 20
 CAMERA_BORDERS_X = vectors.Vec([0, WIDTH + WIDTH / PIXEL_SCALE_FACTOR])
 # Border_y (top border, bottom border)
 CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT + 2 * HEIGHT / PIXEL_SCALE_FACTOR])
+CAMERA_OFFSET_X = 0
+CAMERA_OFFSET_Y = 60
 
 # player stats
 JUMP_SPEED = 300
@@ -48,7 +50,7 @@ foo = world_gen.RoomLayout(20, 20)
 foo.create_rooms()
 
 # resolution tiles: 60 * 51
-room = world_gen.Island(60, 51, [30, 23], 56, 21, 500)
+room = world_gen.Island(60, 51, [30, 27], 56, 21, 500)
 
 path = os.getcwd()
 tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap.png')).convert_alpha()
@@ -73,8 +75,8 @@ bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png')).convert
 
 bullets = []
 
-debug_screen = game_debugger.DebugPanel(vectors.Vec([WIDTH, 80]), vectors.Vec([0, 0]))
-debug_text = debug_screen.input_box
+# debug_screen = game_debugger.DebugPanel(vectors.Vec([WIDTH, 80]), vectors.Vec([0, 0]))
+# debug_text = debug_screen.input_box
 
 #endregion
 
@@ -199,6 +201,10 @@ class Player():
 
     def check_collision(self, old_pos, new_pos) -> vectors.Vec:
         dp = new_pos - old_pos
+        collision_types = {
+            'top': False,
+            'bot': False,
+        }
 
         for tile in tile_rects:
             # check for collision in x direction
@@ -210,13 +216,18 @@ class Player():
                 # check if below ground / jumping
                 if self.physics.velocity[1] < 0:
                     dp[1] = tile.bottom - self.rect.top
-                    self.physics.velocity[1] = RELEASE_FALL_SPEED
+                    collision_types['top'] = True
                 # check if above ground / falling
                 elif self.physics.velocity[1] > 0:
                     self.on_ground = True
                     dp[1] = tile.top - self.rect.bottom
-                    self.physics.velocity[1] = 0
+                    collision_types['bot'] = True
 
+        if collision_types['top'] == True:
+            self.physics.velocity[1] = RELEASE_FALL_SPEED
+        elif collision_types['bot'] == True:
+            self.physics.velocity[1] = 0
+        
         old_pos += dp
         return old_pos
 
@@ -270,14 +281,14 @@ player = Player(
 running = True
 while running:
     screen.fill(BLACK)
-    if not debug_text.active:
-        if player.on_ground:
-            player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
-        elif not player.on_ground:
-            player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
+    # if not debug_text.active:
+    if player.on_ground:
+        player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
+    elif not player.on_ground:
+        player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
 
-    true_camera_scroll[0] += (player.physics.position[0] * PIXEL_SCALE_FACTOR - true_camera_scroll[0] - WIDTH / 2) / CAMERA_MOVE_SLOWNESS
-    true_camera_scroll[1] += (player.physics.position[1] * PIXEL_SCALE_FACTOR - true_camera_scroll[1] - HEIGHT / 2) / CAMERA_MOVE_SLOWNESS
+    true_camera_scroll[0] += ((player.physics.position[0] + CAMERA_OFFSET_X) * PIXEL_SCALE_FACTOR - true_camera_scroll[0] - WIDTH / 2) / CAMERA_MOVE_SLOWNESS
+    true_camera_scroll[1] += ((player.physics.position[1] + CAMERA_OFFSET_Y) * PIXEL_SCALE_FACTOR - true_camera_scroll[1] - HEIGHT / 2) / CAMERA_MOVE_SLOWNESS
     
     # turn the camera scroll value to integer. Helps with bugs apparently
     rounded_camera_scroll = list(map(lambda x: int(x / PIXEL_SCALE_FACTOR), true_camera_scroll))
@@ -330,7 +341,7 @@ while running:
         (0, 0)
     )
 
-    debug_screen.update(screen)
+    # debug_screen.update(screen)
 
     pyg.display.update()
 
@@ -342,20 +353,20 @@ while running:
             # debug_game.reset_all()
             pyg.quit()
         if event.type == pyg.KEYDOWN:
-            if debug_text.active:
-                if event.key == pyg.K_BACKSPACE:
-                    debug_text.text = debug_text.text[:-1]
-                elif event.key == pyg.K_RETURN:
-                    changed = debug_screen.parse_input()
-                    if changed != ():
-                        exec("%s = %d" % changed)
+            # if debug_text.active:
+                # if event.key == pyg.K_BACKSPACE:
+                    # debug_text.text = debug_text.text[:-1]
+                # elif event.key == pyg.K_RETURN:
+                #     changed = debug_screen.parse_input()
+                #     if changed != ():
+                #         exec("%s = %d" % changed)
 
-                    debug_text.active = False
-                else:
-                    debug_text.text += event.unicode
+                #     debug_text.active = False
+                # else:
+                #     debug_text.text += event.unicode
 
-                debug_text.update_text()
-            else:
+                # debug_text.update_text()
+            # else:
                 if event.key == pyg.K_SPACE and player.on_ground:
                     player.on_ground = False
                     player.physics.velocity[1] = -JUMP_SPEED
@@ -367,9 +378,9 @@ while running:
                 player.physics.velocity[1] = RELEASE_FALL_SPEED
         if event.type == pyg.MOUSEBUTTONDOWN:
             if event.button == 1: # 1 is left mouse button
-                if debug_text.rect.collidepoint(event.pos):
-                    debug_text.active = True
-                else:
-                    debug_text.active = False
+                # if debug_text.rect.collidepoint(event.pos):
+                #     debug_text.active = True
+                # else:
+                #     debug_text.active = False
                     player.shoot()
 #endregion
