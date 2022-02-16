@@ -41,6 +41,11 @@ class RoomLayout():
                     room = Island(60, 51, [30, 27], 30, 25, 500)
                     room.write(j, i)
 
+        for i in range(self.height):
+            print(self.tilemap[i])
+
+        self.write_map()
+
     def step(self, tile):
         # gets neighbours
         neighbours = self.get_neighbours(tile[1], tile[0])
@@ -48,6 +53,9 @@ class RoomLayout():
         tile = random.choice(neighbours)
         # print(tile)
         self.tilemap[tile[0]][tile[1]] = 1
+
+        self.rooms.append(tile)
+
         return tile
 
 
@@ -66,7 +74,17 @@ class RoomLayout():
             if self.tilemap[y + 1][x] == 0:
                 neighbours.append([y + 1, x])
 
+
         return neighbours
+
+    def write_map(self):
+        path = os.getcwd()
+        map_path = os.path.join(path, "Map/map.txt")
+
+        f_map = open(map_path, "x")
+        
+        f_map.write(str(self.rooms))
+
 
 class Island():
     def __init__(self, width, height, center, max_radius_x, max_radius_y, probability_factor):
@@ -144,14 +162,25 @@ class Island():
     
     def write(self, y, x):
         path = os.getcwd()
-        file_path = os.path.join(path, "Map/room_{y_coordinate}_{x_coordinate}.txt".format(y_coordinate = y, x_coordinate = x))
-        f = open(file_path, "x")
+        room_map_path = os.path.join(path, "Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = x, y_coordinate = y))
 
+        f_room = open(room_map_path, "x")
+        
         tilemap_string = ""
         for i in range(len(self.tilemap)):
             tilemap_string += "\n"
             for j in range(len(self.tilemap[i])):
                 tilemap_string += str(self.tilemap[i][j])
 
-        f.write(tilemap_string)
+        f_room.write(tilemap_string)
 
+    @staticmethod
+    def read_tilemap(tilemap_data):
+        rows = tilemap_data.split("\n")
+        rows.pop(0)
+
+        for i in range(len(rows)):
+            str_list = list(rows[i])
+            rows[i] = [int(i) for i in str_list]
+            
+        return rows

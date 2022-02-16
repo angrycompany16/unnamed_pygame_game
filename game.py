@@ -1,5 +1,6 @@
 import math, vectors, os, enum, game_debugger, world_gen
 import pygame as pyg
+from ast import literal_eval
 
 #region CONSTANTS
 # resolution tiles: 60 * 51
@@ -46,15 +47,29 @@ rounded_camera_scroll = vectors.Vec([0, 0])
 main_clock = pyg.time.Clock()
 delta_time = 0
 
-foo = world_gen.RoomLayout(20, 20)
-foo.create_rooms()
 
-# TODO - make text file parser and create functioning level system
 # room = world_gen.Island(60, 51, [30, 27], 30, 25, 500)
 # room.write(3, 4)
 
 path = os.getcwd()
 tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap.png')).convert_alpha()
+
+level_layout = []
+
+# TODO - make level layout work properly
+if os.listdir(path + "/Map") == []:
+    foo = world_gen.RoomLayout(20, 20)
+    foo.create_rooms()
+else:
+    map_path = os.path.join(path + "/Map/map.txt")
+    f_map = open(map_path, "r")
+    map_str = f_map.read()
+    level_layout = literal_eval(map_str)
+
+    room_path = os.path.join(path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
+    f_level = open(room_path, "r")
+    tilemap = world_gen.Island.read_tilemap(f_level.read())
+
 
 tileset_width = int(tileset_image.get_width() / 16)
 tileset_height = int(tileset_image.get_height() / 16)
@@ -302,10 +317,10 @@ while running:
 
     surf.blit(bg_img,  (-rounded_camera_scroll[0], -rounded_camera_scroll[1]))
 
-    for i in range(len(room.tilemap)):
-        for j in range(len(room.tilemap[i])):
-            if room.tilemap[i][j] != 0:
-                surf.blit(tileset[room.tilemap[i][j]], (
+    for i in range(len(tilemap)):
+        for j in range(len(tilemap[i])):
+            if tilemap[i][j] != 0:
+                surf.blit(tileset[tilemap[i][j]], (
                     16 * j - rounded_camera_scroll[0], 
                     16 * i - rounded_camera_scroll[1])
                 )
