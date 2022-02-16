@@ -49,8 +49,9 @@ delta_time = 0
 foo = world_gen.RoomLayout(20, 20)
 foo.create_rooms()
 
-# resolution tiles: 60 * 51
-room = world_gen.Island(60, 51, [30, 27], 56, 21, 500)
+# TODO - make text file parser and create functioning level system
+# room = world_gen.Island(60, 51, [30, 27], 30, 25, 500)
+# room.write(3, 4)
 
 path = os.getcwd()
 tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap.png')).convert_alpha()
@@ -266,7 +267,7 @@ class Player():
 
 player = Player(
     PhysicsObject(
-        vectors.Vec([100, 0]),
+        vectors.Vec([300, -100]),
         vectors.Vec([0, 0]),
         vectors.Vec([0, 0])
     ),
