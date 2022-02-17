@@ -47,7 +47,6 @@ rounded_camera_scroll = vectors.Vec([0, 0])
 main_clock = pyg.time.Clock()
 delta_time = 0
 
-
 # room = world_gen.Island(60, 51, [30, 27], 30, 25, 500)
 # room.write(3, 4)
 
@@ -56,10 +55,18 @@ tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap.p
 
 level_layout = []
 
-# TODO - make level layout work properly
 if os.listdir(path + "/Map") == []:
     foo = world_gen.RoomLayout(20, 20)
     foo.create_rooms()
+    
+    map_path = os.path.join(path + "/Map/map.txt")
+    f_map = open(map_path, "r")
+    map_str = f_map.read()
+    level_layout = literal_eval(map_str)
+
+    room_path = os.path.join(path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
+    f_level = open(room_path, "r")
+    tilemap = world_gen.Island.read_tilemap(f_level.read())
 else:
     map_path = os.path.join(path + "/Map/map.txt")
     f_map = open(map_path, "r")
