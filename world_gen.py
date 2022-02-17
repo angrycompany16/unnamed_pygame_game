@@ -1,10 +1,6 @@
 import numpy as np
 import pygame as pyg
-import random
-import noise
-import copy
-import math
-import os
+import random, noise, copy, math, os
 
 # create a tilemap that just contains random noise
 class RoomLayout():
@@ -26,6 +22,7 @@ class RoomLayout():
         start = [0, rand]
         # print(start)
         activetile = start
+        self.rooms.append(activetile)
         # setting the tile to a room
         self.tilemap[0][rand] = 1
 
