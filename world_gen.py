@@ -2,7 +2,7 @@ import numpy as np
 import pygame as pyg
 import random, noise, copy, math, os, functools
 
-# TODO - FIX THE TILEMAP HELP IT'S BROKEN
+# TODO - fix the tilemap and solve the problem with BG and FG tilemaps
 
 # region RULES(tiles)
 
@@ -61,7 +61,7 @@ TOP_LEFT_GRASS = (
 )
 
 TOP_MID_GRASS = (
-    (0, 0, 0),
+    (-1, -1, -1),
     (0, 1, 0),
     (1, 1, 1)
 )
@@ -289,19 +289,27 @@ class Island():
                     # for row in check:
                     #     print(row)
 
-                    if self.tilemap[i][j] != 0 and check == [
-                        [True, True, True],
-                        [True, True, True],
-                        [True, True, True]
-                    ]:    
-                        print("set tile to " + str(self.rules[key]))
-                        tilemap_copy[i][j] = self.rules[key]
-                        break
-                    elif self.tilemap[i][j] == 0:
-                        pass
+                    if self.tilemap[i][j] != 0:
+                        if check == [
+                            [True, True, True],
+                            [True, True, True],
+                            [True, True, True]
+                        ]:    
+                            print("set tile to " + str(self.rules[key]))
+                            tilemap_copy[i][j] = self.rules[key]
+                            break
+                        else:
+                            # print("yees")
+                            tilemap_copy[i][j] = 5
                     else:
-                        # print("yees")
-                        tilemap_copy[i][j] = 5
+                        if check == [
+                            [True, True, True],
+                            [True, True, True],
+                            [True, True, True]
+                        ]:    
+                            print("set tile to " + str(self.rules[key]))
+                            tilemap_copy[i][j] = self.rules[key]
+                            break
                         
         
         self.tilemap = tilemap_copy
@@ -313,11 +321,13 @@ class Island():
 
         f_room = open(room_map_path, "x")
         
-        tilemap_string = ""
-        for i in range(len(self.tilemap)):
+        tilemap_string = "["
+        for row in self.tilemap:
             tilemap_string += "\n"
-            for j in range(len(self.tilemap[i])):
-                tilemap_string += str(self.tilemap[i][j])
+            tilemap_string += str(row)
+            tilemap_string += ","
+
+        tilemap_string += "]"        
 
         f_room.write(tilemap_string)
 

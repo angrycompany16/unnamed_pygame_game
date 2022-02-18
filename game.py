@@ -62,21 +62,19 @@ if os.listdir(path + "/Map") == []:
     
     map_path = os.path.join(path + "/Map/map.txt")
     f_map = open(map_path, "r")
-    map_str = f_map.read()
-    level_layout = literal_eval(map_str)
+    level_layout = literal_eval(f_map.read())
 
     room_path = os.path.join(path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
     f_level = open(room_path, "r")
-    tilemap = world_gen.Island.read_tilemap(f_level.read())
+    tilemap = literal_eval(f_level.read())
 else:
     map_path = os.path.join(path + "/Map/map.txt")
     f_map = open(map_path, "r")
-    map_str = f_map.read()
-    level_layout = literal_eval(map_str)
+    level_layout = literal_eval(f_map.read())
 
     room_path = os.path.join(path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
     f_level = open(room_path, "r")
-    tilemap = world_gen.Island.read_tilemap(f_level.read())
+    tilemap = literal_eval(f_level.read())
 
 
 tileset_width = int(tileset_image.get_width() / 16)
@@ -91,7 +89,7 @@ for i in range(tileset_width * tileset_height):
 
 for i in range(tileset_height):
     for j in range(tileset_width):
-        tileset[3 * i + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
+        tileset[i * tileset_width + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
 
 bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png'))
 
