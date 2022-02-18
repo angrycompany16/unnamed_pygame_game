@@ -25,6 +25,7 @@ GRAVITY_MULTIPLIER = 50
 RELEASE_FALL_SPEED = 10
 BULLET_SPEED = 400
 SHOOT_BOUNCE_SPEED = 300
+MAX_FALL_VEL = 200
 
 # movement damping
 WALK_DAMPING = 20
@@ -86,15 +87,13 @@ tileset_height = int(tileset_image.get_height() / 16)
 tileset = []
 
 for i in range(tileset_width * tileset_height):
-    tileset.append(pyg.Surface((16, 16)))
-
-test_arr = [0] * tileset_width * tileset_height
+    tileset.append(pyg.Surface((16, 16), pyg.SRCALPHA))
 
 for i in range(tileset_height):
     for j in range(tileset_width):
         tileset[3 * i + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
 
-bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png')).convert_alpha()
+bg_img = pyg.image.load(os.path.join(path, 'Sprites', 'background.png'))
 
 bullets = []
 
@@ -200,6 +199,10 @@ class PhysicsObject():
 
     def calculate_movement(self):
         self.velocity += vectors.Vec([0, 9.81 * GRAVITY_MULTIPLIER]) * delta_time
+        
+        if  self.velocity[1] > MAX_FALL_VEL:
+            self.velocity[1] = MAX_FALL_VEL
+
         self.position += self.velocity * delta_time
 
         return self.position
@@ -356,7 +359,7 @@ while running:
             mouse_pos[1] / PIXEL_SCALE_FACTOR
         )
     )
-    
+
     screen.blit(pyg.transform.scale(
             surf, 
             (WIDTH, HEIGHT)

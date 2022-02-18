@@ -1,6 +1,93 @@
 import numpy as np
 import pygame as pyg
-import random, noise, copy, math, os
+import random, noise, copy, math, os, functools
+
+# TODO - FIX THE TILEMAP HELP IT'S BROKEN
+
+# region RULES(tiles)
+
+L_TOP_CORNER = (
+    (0, -1, 0),
+    (-1, 1, 0),
+    (0, 0, 1)
+)
+
+TOP_SIDE = (
+    (0, -1, 0),
+    (1, 1, 1),
+    (0, 0, 0)
+)
+
+R_TOP_CORNER = (
+    (0, -1, 0),
+    (0, 1, -1),
+    (1, 0, 0)
+)
+
+LEFT_SIDE = (
+    (0, 1, 0),
+    (-1, 1, 0),
+    (0, 1, 0)
+)
+
+RIGHT_SIDE = (
+    (0, 1, 0),
+    (0, 1, -1),
+    (0, 1, 0)
+)
+
+L_BOT_CORNER = (
+    (0, 0, 1),
+    (-1, 1, 0),
+    (0, -1, 0)
+)
+
+BOT_SIDE = (
+    (0, 0, 0),
+    (1, 1, 1),
+    (0, -1, 0)
+)
+
+R_BOT_CORNER = (
+    (1, 0, 0),
+    (0, 1, -1),
+    (0, -1, 0)
+)
+
+TOP_LEFT_GRASS = (
+    (0, 0, 0),
+    (-1, 1, 0),
+    (-1, 1, 0)
+)
+
+TOP_MID_GRASS = (
+    (0, 0, 0),
+    (0, 1, 0),
+    (1, 1, 1)
+)
+
+TOP_RIGHT_GRASS = (
+    (0, 0, 0),
+    (0, 1, -1),
+    (0, 1, -1)
+)
+
+tile_rules = {
+    L_TOP_CORNER: 1,
+    TOP_SIDE: 2,
+    R_TOP_CORNER: 3,
+    LEFT_SIDE: 4,
+    RIGHT_SIDE: 6,
+    L_BOT_CORNER: 7,
+    BOT_SIDE: 8,
+    R_BOT_CORNER: 9,
+    TOP_LEFT_GRASS: 10,
+    TOP_MID_GRASS: 11,
+    TOP_RIGHT_GRASS: 12,
+}
+
+#endregion
+
 
 # create a tilemap that just contains random noise
 class RoomLayout():
@@ -35,11 +122,11 @@ class RoomLayout():
         for i in range(len(self.tilemap)):
             for j in range(len(self.tilemap[i])):
                 if self.tilemap[i][j] == 1:
-                    room = Island(60, 51, [30, 27], 30, 25, 500)
+                    room = Island(60, 51, [30, 27], 30, 25, 500, tile_rules)
                     room.write(j, i)
 
-        for i in range(self.height):
-            print(self.tilemap[i])
+        # for i in range(self.height):
+        #     print(self.tilemap[i])
 
         self.write_map()
 
@@ -82,9 +169,8 @@ class RoomLayout():
         
         f_map.write(str(self.rooms))
 
-
 class Island():
-    def __init__(self, width, height, center, max_radius_x, max_radius_y, probability_factor):
+    def __init__(self, width, height, center, max_radius_x, max_radius_y, probability_factor, rules):
         self.tilemap = []
         self.center = center
         self.height = height
@@ -92,12 +178,19 @@ class Island():
         self.max_radius_x = max_radius_x
         self.max_radius_y = max_radius_y
         self.probability_factor = probability_factor
+
+        self.rules = rules
+
         for i in range(height):
             self.tilemap.append([])
             for j in range(width):
                 self.tilemap[i].append(0)
 
         self.generate_tiles()
+        self.apply_rules()
+
+        for row in self.tilemap:
+            print(row)
 
     def generate_tiles(self):
         random_seed_1 = np.random.random() * 1000
@@ -152,11 +245,68 @@ class Island():
                     tilemap_copy[i][j] = 0
 
         return tilemap_copy
-        # Loop through all tiles, and count the number of neighbours
-        # If more than four neighbours are floor, the tile becomes floor
-        # If four or fewer are floor, the tile becomes air
-        # Iterate through these steps many times 
-    
+
+    def apply_rules(self):
+        tilemap_copy = copy.deepcopy(self.tilemap)
+        printed = False
+
+        for i in range(len(tilemap_copy)):
+            for j in range(len(tilemap_copy[i])):
+                neighbours = [
+                    [0, 0, 0],
+                    [0, 0, 0],
+                    [0, 0, 0]
+                ]
+
+                for y in range(i - 1, i + 2):
+                    for x in range(j - 1, j + 2):
+                        if y > 0 and y < self.height - 1:
+                            if x > 0 and x < self.width - 1:
+                                neighbours[y - i + 1][x - j + 1] = self.tilemap[y][x]
+
+                for key in self.rules:
+                    check = [
+                        [False, False, False],
+                        [False, False, False],
+                        [False, False, False]
+                    ]
+
+                    for y in range(len(key)):
+                        for x in range(len(key[y])):
+        
+                            if key[y][x] == 0:
+                                check[y][x] = True
+                            elif key[y][x] == -1 and neighbours[y][x] == 0:
+                                check[y][x] = True
+                            elif key[y][x] == 1 and neighbours[y][x] == 1:
+                                check[y][x] = True
+
+                    if self.tilemap[i][j] != 0 and not printed:
+                        print(neighbours, key)
+                        print(i, j)
+                        print(check)
+                        printed = True
+                    # for row in check:
+                    #     print(row)
+
+                    if self.tilemap[i][j] != 0 and check == [
+                        [True, True, True],
+                        [True, True, True],
+                        [True, True, True]
+                    ]:    
+                        print("set tile to " + str(self.rules[key]))
+                        tilemap_copy[i][j] = self.rules[key]
+                        break
+                    elif self.tilemap[i][j] == 0:
+                        pass
+                    else:
+                        # print("yees")
+                        tilemap_copy[i][j] = 5
+                        
+        
+        self.tilemap = tilemap_copy
+
+
     def write(self, y, x):
         path = os.getcwd()
         room_map_path = os.path.join(path, "Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = x, y_coordinate = y))
@@ -181,3 +331,11 @@ class Island():
             rows[i] = [int(i) for i in str_list]
             
         return rows
+
+
+
+
+
+# random ass test function
+def generate_test_map():
+    island = Island(60, 51, [30, 27], 30, 25, 500, tile_rules)
