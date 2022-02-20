@@ -1,4 +1,4 @@
-import math, vectors, os, enum, game_debugger, world_gen
+import math, vectors, os, enum, game_debugger, world_gen, copy
 import pygame as pyg
 from ast import literal_eval
 
@@ -54,6 +54,9 @@ delta_time = 0
 path = os.getcwd()
 tileset_image = pyg.image.load(os.path.join(path, 'Sprites/Tilemaps', 'tilemap.png')).convert_alpha()
 
+tilemap_fg = []
+tilemap_mg = []
+
 level_layout = []
 
 if os.listdir(path + "/Map") == []:
@@ -66,7 +69,19 @@ if os.listdir(path + "/Map") == []:
 
     room_path = os.path.join(path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
     f_level = open(room_path, "r")
-    tilemap = literal_eval(f_level.read())
+    tilemap_read = literal_eval(f_level.read())
+
+    # Setting all the elements of the 2D array to 0
+    tilemap_fg = map(lambda y: map(lambda x: 0, y), copy.deepcopy(tilemap_read))
+    tilemap_mg = map(lambda y: map(lambda x: 0, y), copy.deepcopy(tilemap_read))
+
+    for i in range(len(tilemap_read)):
+        for j in range(len(tilemap_read[i])):
+            if tilemap_read[i][j] < 10:
+                tilemap_fg[i][j] = tilemap_read[i][j]
+            else:
+                tilemap_mg[i][j] = tilemap_read[i][j]
+                
 else:
     map_path = os.path.join(path + "/Map/map.txt")
     f_map = open(map_path, "r")
@@ -74,7 +89,18 @@ else:
 
     room_path = os.path.join(path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
     f_level = open(room_path, "r")
-    tilemap = literal_eval(f_level.read())
+    tilemap_read = literal_eval(f_level.read())
+
+    # Setting all the elements of the 2D array to 0
+    tilemap_fg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
+    tilemap_mg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
+
+    for i in range(len(tilemap_read)):
+        for j in range(len(tilemap_read[i])):
+            if tilemap_read[i][j] < 10:
+                tilemap_fg[i][j] = tilemap_read[i][j]
+            else:
+                tilemap_mg[i][j] = tilemap_read[i][j]
 
 
 tileset_width = int(tileset_image.get_width() / 16)
@@ -205,6 +231,8 @@ class PhysicsObject():
 
         return self.position
 
+
+# TODO - fix the jumping so you can't jump after falling off a ledge and also add double jump
 class Player():
     def __init__(self, physics, image, gun):
         self.physics = physics
@@ -325,14 +353,22 @@ while running:
 
     surf.blit(bg_img,  (-rounded_camera_scroll[0], -rounded_camera_scroll[1]))
 
-    for i in range(len(tilemap)):
-        for j in range(len(tilemap[i])):
-            if tilemap[i][j] != 0:
-                surf.blit(tileset[tilemap[i][j]], (
+    for i in range(len(tilemap_fg)):
+        for j in range(len(tilemap_fg[i])):
+            if tilemap_fg[i][j] != 0:
+                surf.blit(tileset[tilemap_fg[i][j]], (
                     16 * j - rounded_camera_scroll[0], 
                     16 * i - rounded_camera_scroll[1])
                 )
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
+
+    for i in range(len(tilemap_mg)):
+        for j in range(len(tilemap_mg[i])):
+            if tilemap_mg[i][j] != 0:
+                surf.blit(tileset[tilemap_mg[i][j]], (
+                    16 * j - rounded_camera_scroll[0], 
+                    16 * i - rounded_camera_scroll[1])
+                )
 
     # this can be optimized by calculating the trajectory of the bullet and only checking the rects that overlap, since the bullets move in a straight line
     # collision with enemies will be implemented in the same way

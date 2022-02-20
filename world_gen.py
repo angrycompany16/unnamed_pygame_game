@@ -2,8 +2,6 @@ import numpy as np
 import pygame as pyg
 import random, noise, copy, math, os, functools
 
-# TODO - fix the tilemap and solve the problem with BG and FG tilemaps
-
 # region RULES(tiles)
 
 L_TOP_CORNER = (
@@ -56,19 +54,19 @@ R_BOT_CORNER = (
 
 TOP_LEFT_GRASS = (
     (0, 0, 0),
-    (-1, 1, 0),
+    (-1, -1, 0),
     (-1, 1, 0)
 )
 
 TOP_MID_GRASS = (
-    (-1, -1, -1),
-    (0, 1, 0),
+    (0, -1, 0),
+    (0, -1, 0),
     (1, 1, 1)
 )
 
 TOP_RIGHT_GRASS = (
     (0, 0, 0),
-    (0, 1, -1),
+    (0, -1, -1),
     (0, 1, -1)
 )
 
@@ -88,6 +86,7 @@ tile_rules = {
 
 #endregion
 
+# TODO - add randomization to the levels
 
 # create a tilemap that just contains random noise
 class RoomLayout():
@@ -295,7 +294,7 @@ class Island():
                             [True, True, True],
                             [True, True, True]
                         ]:    
-                            print("set tile to " + str(self.rules[key]))
+                            # print("set tile to " + str(self.rules[key]))
                             tilemap_copy[i][j] = self.rules[key]
                             break
                         else:
@@ -307,7 +306,8 @@ class Island():
                             [True, True, True],
                             [True, True, True]
                         ]:    
-                            print("set tile to " + str(self.rules[key]))
+                            print("changed air block")
+                            # print("set tile to " + str(self.rules[key]))
                             tilemap_copy[i][j] = self.rules[key]
                             break
                         
