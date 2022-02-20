@@ -1,6 +1,5 @@
 import numpy as np
-import pygame as pyg
-import random, noise, copy, math, os, functools
+import random, noise, copy, math, os
 
 # region RULES(tiles)
 
@@ -86,7 +85,7 @@ tile_rules = {
 
 #endregion
 
-# TODO - add randomization to the levels
+# TODO - (low priority) add randomization to the levels
 
 # create a tilemap that just contains random noise
 class RoomLayout():
