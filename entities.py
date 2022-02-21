@@ -61,7 +61,7 @@ class Drone(Entity):
             self.pos, 
             (image.get_width(), image.get_height())
         )
-        self.gun = Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')))
+        self.gun = Gun(pyg.image.load(os.path.join('Sprites', 'invisible.png')))
         # Shots per second
         self.fire_rate = fire_rate
         self.vel = vectors.Vec([0, 0])

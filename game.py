@@ -277,26 +277,12 @@ player = Player(
     5
 )
 
-
-
 # turret = entities.Turret(10, 1, vectors.Vec([500, 500]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
 # enemy_list.append(turret)
 
-drone1 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
-enemy_list.append(drone1)
-
-drone2 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
-enemy_list.append(drone2)
-
-drone3 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
-enemy_list.append(drone3)
-
-drone4 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
-enemy_list.append(drone4)
-
-drone5 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
-enemy_list.append(drone5)
-
+for i in range(10):
+    drone = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'drone_enemy.png')))
+    enemy_list.append(drone)
 
 #endregion
 
@@ -395,8 +381,8 @@ while running:
             enemy_list[enemy_index].take_damage(bullet.damage)
             if enemy_list[enemy_index].current_HP <= 0:
                 enemy_list.pop(enemy_index)
-
-            player.bullets.remove(bullet)
+            if bullet in player.bullets:
+                player.bullets.remove(bullet)
 
 
     player.update()
