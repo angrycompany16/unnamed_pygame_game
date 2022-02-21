@@ -2,7 +2,7 @@ import math, os, vectors
 import pygame as pyg
 import game_manager as gm
 
-class Enemy():
+class Entity():
     def __init__(self, max_HP, contact_damage):
         self.max_HP = max_HP
         self.contact_damage = contact_damage
@@ -12,7 +12,7 @@ class Enemy():
         print(f"took {damage} damage")
         self.current_HP -= damage
 
-class Turret(Enemy):
+class Turret(Entity):
     def __init__(self, max_HP, contact_damage, pos, image, fire_rate = 0.5):
         super().__init__(max_HP, contact_damage)
         self.pos = pos
@@ -43,7 +43,56 @@ class Turret(Enemy):
         )
         self.bullets.append(bullet)
     
-    def update(self):
+    def update(self, target=vectors.Vec([0, 0])):
+        self.time += gm.delta_time
+
+        if self.time > 1 / self.fire_rate:
+            self.shoot()
+            self.time = 0
+        
+
+class Drone(Entity):
+    def __init__(self, max_HP, contact_damage, pos, image, fire_rate = 0.5):
+        super().__init__(max_HP, contact_damage)
+        self.pos = pos
+        self.bullets = []
+        self.image = image
+        self.rect = pyg.Rect(
+            self.pos, 
+            (image.get_width(), image.get_height())
+        )
+        self.gun = Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')))
+        # Shots per second
+        self.fire_rate = fire_rate
+        self.vel = vectors.Vec([0, 0])
+        self.time = 0
+
+    def shoot(self):
+        bullet = Bullet(
+            vectors.Vec([
+                self.pos[0] + self.image.get_width() / 2,
+                self.pos[1] + self.image.get_height() / 2
+            ]),
+            vectors.Vec([
+                -math.cos((self.gun.angle) * math.pi / 180),
+                math.sin((self.gun.angle) * math.pi / 180)
+            ]),
+            pyg.image.load(os.path.join('Sprites', 'enemy_bullet.png')),
+            self.gun.angle,
+            200
+        )
+        self.bullets.append(bullet)
+    
+    def update(self, target=vectors.Vec([0, 0])):
+        vel = vectors.Vec.normalize(vectors.Vec([
+            target[0] - self.pos[0],
+            target[1] - self.pos[1]
+        ]))
+
+        self.pos += vel
+        self.rect.x = self.pos[0]
+        self.rect.y = self.pos[1]
+
         self.time += gm.delta_time
 
         if self.time > 1 / self.fire_rate:
@@ -52,7 +101,7 @@ class Turret(Enemy):
         
        
 class Bullet():
-    def __init__(self, position, velocity, image, angle, speed):
+    def __init__(self, position, velocity, image, angle, speed, damage=1):
         self.position = position
         self.velocity = velocity
         self.angle = angle
@@ -60,6 +109,7 @@ class Bullet():
         self.rect = pyg.Rect((position), (image.get_width(), image.get_height()))
         self.lifetime = 0
         self.speed = speed
+        self.damage = damage
 
     def update(self):
         self.position += self.velocity * gm.delta_time * self.speed

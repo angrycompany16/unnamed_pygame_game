@@ -1,4 +1,4 @@
-import math, vectors, os, enum, game_debugger, world_gen, copy, entities
+import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random
 import game_manager as gm
 import pygame as pyg
 from ast import literal_eval
@@ -17,7 +17,7 @@ CAMERA_BORDERS_X = vectors.Vec([0, WIDTH + WIDTH / PIXEL_SCALE_FACTOR])
 # Border_y (top border, bottom border)
 CAMERA_BORDERS_Y = vectors.Vec([0, HEIGHT + 2 * HEIGHT / PIXEL_SCALE_FACTOR])
 CAMERA_OFFSET_X = 0
-CAMERA_OFFSET_Y = 60
+CAMERA_OFFSET_Y = 0
 
 # player stats
 JUMP_SPEED = 300
@@ -43,7 +43,7 @@ BLACK = pyg.Color(0, 0, 0)
 #region INITIALIZATION & VARIABLES
 
 pyg.init()
-screen = pyg.display.set_mode((WIDTH, HEIGHT))
+screen = pyg.display.set_mode((WIDTH, HEIGHT), pyg.NOFRAME)
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
 true_camera_scroll = vectors.Vec([0, 0])
 
@@ -175,8 +175,9 @@ class PhysicsObject():
 
         return self.position
 
-class Player():
-    def __init__(self, physics, image, gun):
+class Player(entities.Entity):
+    def __init__(self, physics, image, gun, max_HP):
+        super().__init__(max_HP, 0)
         self.physics = physics
         self.image = image
         self.gun = gun
@@ -262,6 +263,9 @@ class Player():
 
         self.bullets.append(bullet)
 
+    def die(self):
+        print("you died")
+
 player = Player(
     PhysicsObject(
         vectors.Vec([300, -100]),
@@ -269,11 +273,29 @@ player = Player(
         vectors.Vec([0, 0])
     ),
     pyg.image.load(os.path.join('Sprites', 'character.png')),
-    entities.Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')))
+    entities.Gun(pyg.image.load(os.path.join('Sprites', 'gun.png'))),
+    5
 )
 
-turret = entities.Turret(10, 1, vectors.Vec([500, 500]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
-enemy_list.append(turret)
+
+
+# turret = entities.Turret(10, 1, vectors.Vec([500, 500]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
+# enemy_list.append(turret)
+
+drone1 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
+enemy_list.append(drone1)
+
+drone2 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
+enemy_list.append(drone2)
+
+drone3 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
+enemy_list.append(drone3)
+
+drone4 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
+enemy_list.append(drone4)
+
+drone5 = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
+enemy_list.append(drone5)
 
 
 #endregion
@@ -324,7 +346,7 @@ while running:
                 )
 
     for enemy in enemy_list:
-        enemy.update()
+        enemy.update(player.physics.position)
         surf.blit(enemy.image, (
                 enemy.rect.x - gm.rounded_camera_scroll[0],
                 enemy.rect.y - gm.rounded_camera_scroll[1])
@@ -345,10 +367,17 @@ while running:
         for bullet in enemy.bullets:
             bullet.update()
             surf.blit(bullet.image, (bullet.rect.x - gm.rounded_camera_scroll[0], bullet.rect.y - gm.rounded_camera_scroll[1]))
+            if pyg.Rect.colliderect(bullet.rect, player.rect):
+                player.take_damage(bullet.damage)
+                enemy.bullets.remove(bullet)
+                if player.current_HP <= 0:
+                    player.die()
+                    running = False
+            
 
     # this can be optimized by calculating the trajectory of the bullet and only checking the rects that overlap, since the bullets move in a straight line
     # collision with enemies will be implemented in the same way
-    enemy_rects = [enemy.rect for rect in enemy_list]
+    enemy_rects = [enemy.rect for enemy in enemy_list]
 
     for bullet in player.bullets:
         bullet.update()
@@ -362,7 +391,8 @@ while running:
         enemy_index = pyg.Rect.collidelist(bullet.rect, enemy_rects)
         
         if enemy_index != -1:
-            enemy_list[enemy_index].take_damage(1)
+            print(enemy_index)
+            enemy_list[enemy_index].take_damage(bullet.damage)
             if enemy_list[enemy_index].current_HP <= 0:
                 enemy_list.pop(enemy_index)
 
