@@ -13,7 +13,7 @@ class Enemy():
         self.current_HP -= damage
 
 class Turret(Enemy):
-    def __init__(self, max_HP, contact_damage, pos, image):
+    def __init__(self, max_HP, contact_damage, pos, image, fire_rate = 0.5):
         super().__init__(max_HP, contact_damage)
         self.pos = pos
         self.bullets = []
@@ -23,18 +23,33 @@ class Turret(Enemy):
             (image.get_width(), image.get_height())
         )
         self.gun = Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')))
-    
+        # Shots per second
+        self.fire_rate = fire_rate
+        self.time = 0
+
     def shoot(self):
         bullet = Bullet(
-            self.pos,
+            vectors.Vec([
+                self.pos[0] + self.image.get_width() / 2,
+                self.pos[1] + self.image.get_height() / 2
+            ]),
             vectors.Vec([
                 -math.cos((self.gun.angle) * math.pi / 180),
                 math.sin((self.gun.angle) * math.pi / 180)
             ]),
-            pyg.image.load(os.path.join('Sprites', 'bullet.png')),
+            pyg.image.load(os.path.join('Sprites', 'enemy_bullet.png')),
             self.gun.angle,
-            100
+            200
         )
+        self.bullets.append(bullet)
+    
+    def update(self):
+        self.time += gm.delta_time
+
+        if self.time > 1 / self.fire_rate:
+            self.shoot()
+            self.time = 0
+        
        
 class Bullet():
     def __init__(self, position, velocity, image, angle, speed):

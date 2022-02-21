@@ -27,6 +27,7 @@ RELEASE_FALL_SPEED = 10
 BULLET_SPEED = 400
 SHOOT_BOUNCE_SPEED = 300
 MAX_FALL_VEL = 200
+MAX_X_VEL = 300
 MAX_JUMP_VEL = 400
 
 # movement damping
@@ -167,10 +168,12 @@ class PhysicsObject():
         elif self.velocity[1] < -MAX_JUMP_VEL:
             self.velocity[1] = -MAX_JUMP_VEL
 
+        if abs(self.velocity[0]) > MAX_X_VEL:
+            self.velocity[0] = math.copysign(MAX_X_VEL, self.velocity[0])
+
         self.position += self.velocity * gm.delta_time
 
         return self.position
-
 
 class Player():
     def __init__(self, physics, image, gun):
@@ -269,7 +272,7 @@ player = Player(
     entities.Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')))
 )
 
-turret = entities.Turret(10, 1, vectors.Vec([100, 100]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
+turret = entities.Turret(10, 1, vectors.Vec([500, 500]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
 enemy_list.append(turret)
 
 
@@ -321,6 +324,7 @@ while running:
                 )
 
     for enemy in enemy_list:
+        enemy.update()
         surf.blit(enemy.image, (
                 enemy.rect.x - gm.rounded_camera_scroll[0],
                 enemy.rect.y - gm.rounded_camera_scroll[1])
@@ -330,9 +334,17 @@ while running:
                 enemy.pos[0] + enemy.image.get_width() / 2,
                 enemy.pos[1] + enemy.image.get_height() / 2
             ), 
-            player.physics.position
+            (
+                player.physics.position[0] - gm.rounded_camera_scroll[0] + player.image.get_width() / 2,
+                player.physics.position[1] - gm.rounded_camera_scroll[1] + player.image.get_height() / 2
+            ) 
         )
+
         surf.blit(enemy.gun.sprite, (enemy.gun.rect.x  - gm.rounded_camera_scroll[0], enemy.gun.rect.y - gm.rounded_camera_scroll[1]))
+        
+        for bullet in enemy.bullets:
+            bullet.update()
+            surf.blit(bullet.image, (bullet.rect.x - gm.rounded_camera_scroll[0], bullet.rect.y - gm.rounded_camera_scroll[1]))
 
     # this can be optimized by calculating the trajectory of the bullet and only checking the rects that overlap, since the bullets move in a straight line
     # collision with enemies will be implemented in the same way
