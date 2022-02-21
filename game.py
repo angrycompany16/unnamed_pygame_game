@@ -51,53 +51,61 @@ main_clock = pyg.time.Clock()
 
 tileset_image = pyg.image.load(os.path.join(gm.path, 'Sprites/Tilemaps', 'tilemap.png')).convert_alpha()
 
-tilemap_fg = []
-tilemap_mg = []
-
 level_layout = []
 
+#region MAP
+
+map_path = os.path.join(gm.path + "/Map/map.txt")
+f_map = open(map_path, "r")
+level_layout = literal_eval(f_map.read())
+map_index = 0
+
 # Map generation / reading
-if os.listdir(gm.path + "/Map") == []:
-    foo = world_gen.RoomLayout(20, 20)
-    foo.create_rooms()
+def load_map():
+    print(map_index)
+    if os.listdir(gm.path + "/Map") == []:
+        foo = world_gen.RoomLayout(20, 20)
+        foo.create_rooms()
+        
+        room_path = os.path.join(gm.path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[map_index][0], y_coordinate = level_layout[map_index][1]))
+        f_level = open(room_path, "r")
+        tilemap_read = literal_eval(f_level.read())
+
+        # Setting all the elements of the 2D array to 0
+        tilemap_fg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
+        tilemap_mg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
+
+        for i in range(len(tilemap_read)):
+            for j in range(len(tilemap_read[i])):
+                if tilemap_read[i][j] < 10:
+                    tilemap_fg[i][j] = tilemap_read[i][j]
+                else:
+                    tilemap_mg[i][j] = tilemap_read[i][j]   
+
+        return tilemap_fg, tilemap_mg
+    else:
+        room_path = os.path.join(gm.path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[map_index][0], y_coordinate = level_layout[map_index][1]))
+        f_level = open(room_path, "r")
+        tilemap_read = literal_eval(f_level.read())
+
+        # Setting all the elements of the 2D array to 0
+        tilemap_fg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
+        tilemap_mg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
+
+        for i in range(len(tilemap_read)):
+            for j in range(len(tilemap_read[i])):
+                if tilemap_read[i][j] < 10:
+                    tilemap_fg[i][j] = tilemap_read[i][j]
+                else:
+                    tilemap_mg[i][j] = tilemap_read[i][j]     
+
+        return tilemap_fg, tilemap_mg
+
+
+tilemap_fg, tilemap_mg = load_map()
     
-    map_path = os.path.join(gm.path + "/Map/map.txt")
-    f_map = open(map_path, "r")
-    level_layout = literal_eval(f_map.read())
 
-    room_path = os.path.join(gm.path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
-    f_level = open(room_path, "r")
-    tilemap_read = literal_eval(f_level.read())
-
-    # Setting all the elements of the 2D array to 0
-    tilemap_fg = map(lambda y: map(lambda x: 0, y), copy.deepcopy(tilemap_read))
-    tilemap_mg = map(lambda y: map(lambda x: 0, y), copy.deepcopy(tilemap_read))
-
-    for i in range(len(tilemap_read)):
-        for j in range(len(tilemap_read[i])):
-            if tilemap_read[i][j] < 10:
-                tilemap_fg[i][j] = tilemap_read[i][j]
-            else:
-                tilemap_mg[i][j] = tilemap_read[i][j]        
-else:
-    map_path = os.path.join(gm.path + "/Map/map.txt")
-    f_map = open(map_path, "r")
-    level_layout = literal_eval(f_map.read())
-
-    room_path = os.path.join(gm.path + "/Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = level_layout[0][0], y_coordinate = level_layout[0][1]))
-    f_level = open(room_path, "r")
-    tilemap_read = literal_eval(f_level.read())
-
-    # Setting all the elements of the 2D array to 0
-    tilemap_fg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
-    tilemap_mg = list(map(lambda y: list(map(lambda x: 0, y)), copy.deepcopy(tilemap_read)))
-
-    for i in range(len(tilemap_read)):
-        for j in range(len(tilemap_read[i])):
-            if tilemap_read[i][j] < 10:
-                tilemap_fg[i][j] = tilemap_read[i][j]
-            else:
-                tilemap_mg[i][j] = tilemap_read[i][j]
+#endregion
 
 enemy_list = []
 
@@ -280,9 +288,9 @@ player = Player(
 # turret = entities.Turret(10, 1, vectors.Vec([500, 500]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
 # enemy_list.append(turret)
 
-for i in range(10):
-    drone = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'drone_enemy.png')))
-    enemy_list.append(drone)
+# for i in range(2):
+#     drone = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'drone_enemy.png')))
+#     enemy_list.append(drone)
 
 #endregion
 
@@ -391,12 +399,22 @@ while running:
     surf.blit(player.gun.sprite, (player.gun.rect.x  - gm.rounded_camera_scroll[0], player.gun.rect.y - gm.rounded_camera_scroll[1]))
 
     if player.physics.position[0] > (WIDTH * 2 - CAMERA_BORDERS_X[0]) / PIXEL_SCALE_FACTOR:
+        if enemy_list == []:
+            map_index += 1
+            tilemap_fg, tilemap_mg = load_map()
         player.physics.position[0] = 0
     elif player.physics.position[0] < 0: 
+        if enemy_list == []:
+            map_index += 1
+            tilemap_fg, tilemap_mg = load_map()
         player.physics.position[0] = (WIDTH * 2 - CAMERA_BORDERS_X[0]) / PIXEL_SCALE_FACTOR - player.image.get_width()
 
 
     if player.physics.position[1] > (HEIGHT * 3 - CAMERA_BORDERS_Y[0]) / PIXEL_SCALE_FACTOR:
+        if enemy_list == []:
+            map_index += 1
+            tilemap_fg, tilemap_mg = load_map()
+        
         player.physics.position[1] = 0
 
     mouse_pos = pyg.mouse.get_pos()
