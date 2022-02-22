@@ -9,7 +9,6 @@ class Entity():
         self.current_HP = max_HP
 
     def take_damage(self, damage):
-        print(f"took {damage} damage")
         self.current_HP -= damage
 
 class Turret(Entity):
