@@ -1,4 +1,4 @@
-import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random
+import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random, animations, particle_system
 import game_manager as gm
 import pygame as pyg
 from ast import literal_eval
@@ -89,13 +89,19 @@ tilemap_fg, tilemap_mg = load_map()
 
 def spawn_enemies(amount):
     for i in range(amount):
-        drone = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'drone_enemy.png')))
+        drone = entities.Drone(
+            5, 
+            1, 
+            vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), 
+            pyg.image.load(os.path.join('Sprites/Spritesheets', 'drone_enemy-Sheet.png')),
+            0.05,
+            pyg.image.load(os.path.join('Sprites', 'drone_enemy.png'))
+        )
         enemy_list.append(drone)
 
 spawn_enemies(3)
 
 #endregion
-
 
 tileset_width = int(tileset_image.get_width() / 16)
 tileset_height = int(tileset_image.get_height() / 16)
@@ -338,7 +344,7 @@ while running:
             (
                 player.physics.position[0] - gm.rounded_camera_scroll[0] + player.image.get_width() / 2,
                 player.physics.position[1] - gm.rounded_camera_scroll[1] + player.image.get_height() / 2
-            ) 
+            )
         )
 
         surf.blit(enemy.gun.sprite, (enemy.gun.rect.x  - gm.rounded_camera_scroll[0], enemy.gun.rect.y - gm.rounded_camera_scroll[1]))

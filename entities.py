@@ -1,4 +1,4 @@
-import math, os, vectors
+import math, os, vectors, animations
 import pygame as pyg
 import game_manager as gm
 
@@ -51,11 +51,12 @@ class Turret(Entity):
         
 
 class Drone(Entity):
-    def __init__(self, max_HP, contact_damage, pos, image, fire_rate = 0.5):
+    def __init__(self, max_HP, contact_damage, pos, spritesheet, frame_dur, image, fire_rate = 0.5):
         super().__init__(max_HP, contact_damage)
         self.pos = pos
         self.bullets = []
         self.image = image
+        self.animation = animations.Clip(spritesheet, image.get_width(), image.get_height(), frame_dur)
         self.rect = pyg.Rect(
             self.pos, 
             (image.get_width(), image.get_height())
@@ -93,6 +94,9 @@ class Drone(Entity):
         self.rect.y = self.pos[1]
 
         self.time += gm.delta_time
+
+        self.animation.update()
+        self.image = self.animation.image
 
         if self.time > 1 / self.fire_rate:
             self.shoot()
