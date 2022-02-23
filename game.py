@@ -288,7 +288,7 @@ player = Player(
 # turret = entities.Turret(10, 1, vectors.Vec([500, 500]), pyg.image.load(os.path.join('Sprites', 'turret.png')))
 # enemy_list.append(turret)
 
-# for i in range(2):
+# for i in range(4):
 #     drone = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'drone_enemy.png')))
 #     enemy_list.append(drone)
 
