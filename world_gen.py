@@ -1,5 +1,5 @@
 import numpy as np
-import random, noise, copy, math, os
+import random, noise, copy, math, os, vectors
 
 # region RULES(tiles)
 
@@ -85,6 +85,25 @@ tile_rules = {
 
 #endregion
 
+class ComboTile():
+    def __init__(self, width, height, tile_order):
+        self.width = width
+        self.height = height
+        self.tile_order = tile_order
+
+combo_tiles = (
+    ComboTile(
+        2,
+        3,
+        [13, 14, 15, 16, 17, 18]
+    ),
+    ComboTile(
+        5,
+        5,
+        [0, 0, 19, 20, 0, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34 ,35, 36, 37, 38, 39, 40]
+    ),
+)
+
 # TODO - (low priority) add randomization to the levels
 
 # create a tilemap that just contains random noise
@@ -102,10 +121,10 @@ class RoomLayout():
     def create_rooms(self):
         # 1 equals room, 0 equals not a room
         # rand becomes a random int within the rows
+        print("generating rooms... plase wait")
         rand = random.randint(0, self.width - 1)
         # starting tile is the tile at the top row and random number
         start = [0, rand]
-        # print(start)
         activetile = start
         self.rooms.append(activetile)
         # setting the tile to a room
@@ -121,7 +140,13 @@ class RoomLayout():
             for j in range(len(self.tilemap[i])):
                 if self.tilemap[i][j] == 1:
                     room = Island(60, 51, [30, 27], 30, 25, 500, tile_rules)
-                    room.write(j, i)
+
+                    path = os.getcwd()
+                    room_map_path = os.path.join(path, "Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = i, y_coordinate = j))
+                    
+                    f_room = open(room_map_path, "x")
+
+                    room.write(f_room)
 
         # for i in range(self.height):
         #     print(self.tilemap[i])
@@ -179,6 +204,8 @@ class Island():
 
         self.rules = rules
 
+        self.sprites = []
+
         for i in range(height):
             self.tilemap.append([])
             for j in range(width):
@@ -186,9 +213,9 @@ class Island():
 
         self.generate_tiles()
         self.apply_rules()
-
-        for row in self.tilemap:
-            print(row)
+        
+        # for row in self.tilemap:
+            # print(row)
 
     def generate_tiles(self):
         random_seed_1 = np.random.random() * 1000
@@ -246,7 +273,7 @@ class Island():
 
     def apply_rules(self):
         tilemap_copy = copy.deepcopy(self.tilemap)
-        printed = False
+        # printed = False
 
         for i in range(len(tilemap_copy)):
             for j in range(len(tilemap_copy[i])):
@@ -279,11 +306,11 @@ class Island():
                             elif key[y][x] == 1 and neighbours[y][x] == 1:
                                 check[y][x] = True
 
-                    if self.tilemap[i][j] != 0 and not printed:
-                        print(neighbours, key)
-                        print(i, j)
-                        print(check)
-                        printed = True
+                    # if self.tilemap[i][j] != 0 and not printed:
+                        # print(neighbours, key)
+                        # print(i, j)
+                        # print(check)
+                        # printed = True
                     # for row in check:
                     #     print(row)
 
@@ -305,21 +332,34 @@ class Island():
                             [True, True, True],
                             [True, True, True]
                         ]:    
-                            print("changed air block")
+                            # print("changed air block")
                             # print("set tile to " + str(self.rules[key]))
                             tilemap_copy[i][j] = self.rules[key]
                             break
-                        
         
+        # TODO - fix the tree placing system so it doesn't overwrite other tiles and doesn't place trees in the air
+        for combo_tile in combo_tiles:
+            for i in range(len(tilemap_copy)):
+                for j in range(len(tilemap_copy[i])):
+                    if tilemap_copy[i][j] == 11 and random.randint(0, 10) > 7:
+                        contains_block = False
+                        # print(combo_tile.height)
+                        # print(combo_tile.width)
+                        for y in range(i, i + combo_tile.height):
+                            for x in range(j, combo_tile.width):
+                                if tilemap_copy[y][x] != 0:
+                                    contains_block = True
+
+                        if not contains_block:
+                            for y in range(combo_tile.height):
+                                for x in range(combo_tile.width):
+                                    # print(x, y)
+                                    tilemap_copy[i - y][j + x] = combo_tile.tile_order[y * combo_tile.width + x]
+
+
         self.tilemap = tilemap_copy
 
-
-    def write(self, y, x):
-        path = os.getcwd()
-        room_map_path = os.path.join(path, "Map/room_{x_coordinate}_{y_coordinate}.txt".format(x_coordinate = x, y_coordinate = y))
-
-        f_room = open(room_map_path, "x")
-        
+    def write(self, file):
         tilemap_string = "["
         for row in self.tilemap:
             tilemap_string += "\n"
@@ -328,7 +368,7 @@ class Island():
 
         tilemap_string += "]"        
 
-        f_room.write(tilemap_string)
+        file.write(tilemap_string)
 
     @staticmethod
     def read_tilemap(tilemap_data):
@@ -341,10 +381,7 @@ class Island():
             
         return rows
 
-
-
-
-
 # random ass test function
 def generate_test_map():
     island = Island(60, 51, [30, 27], 30, 25, 500, tile_rules)
+    print(island.tilemap)

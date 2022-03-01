@@ -1,3 +1,7 @@
+# TODO - make better character sprite and animations
+# TODO - clean up the code (make it shorter and group together related stuff)
+# TODO - make level generation include trees and stuff
+
 import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random, animations, particle_system
 import game_manager as gm
 import pygame as pyg
@@ -23,7 +27,7 @@ CAMERA_OFFSET_Y = 0
 JUMP_SPEED = 300
 MOVE_SPEED = 160
 GRAVITY_MULTIPLIER = 50
-RELEASE_FALL_SPEED = 10
+RELEASE_FALL_SPEED = 80
 BULLET_SPEED = 400
 SHOOT_BOUNCE_SPEED = 300
 MAX_FALL_VEL = 200
@@ -38,6 +42,11 @@ RED = pyg.Color(255, 0, 0)
 BLUE = pyg.Color(0, 0, 255)
 BLACK = pyg.Color(0, 0, 0)
 
+BG1 = pyg.Color(57, 49, 75)
+BG2 = pyg.Color(86, 64, 100)
+
+SQUARE_SIZE = 32
+
 #endregion
 
 #region INITIALIZATION & VARIABLES
@@ -45,6 +54,7 @@ BLACK = pyg.Color(0, 0, 0)
 pyg.init()
 screen = pyg.display.set_mode((WIDTH, HEIGHT), pyg.NOFRAME)
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
+bg_surf = pyg.Surface((WIDTH * 2 / PIXEL_SCALE_FACTOR, HEIGHT * 3 / PIXEL_SCALE_FACTOR))
 true_camera_scroll = vectors.Vec([0, 0])
 
 main_clock = pyg.time.Clock()
@@ -93,15 +103,27 @@ def spawn_enemies(amount):
             5, 
             1, 
             vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), 
-            pyg.image.load(os.path.join('Sprites/Spritesheets', 'drone_enemy-Sheet.png')),
+            pyg.image.load(os.path.join('Sprites/Spritesheets', 'drone_enemy-Sheet.png')).convert_alpha(),
             0.05,
-            pyg.image.load(os.path.join('Sprites', 'drone_enemy.png'))
+            pyg.image.load(os.path.join('Sprites', 'drone_enemy.png')).convert_alpha()
         )
         enemy_list.append(drone)
 
-spawn_enemies(3)
+# spawn_enemies(3)
 
 #endregion
+
+def draw_bg():
+    bg_surf.fill(BG2)
+    for i in range(math.ceil(HEIGHT * 3 / (PIXEL_SCALE_FACTOR * SQUARE_SIZE))):
+        for j in range(math.ceil(WIDTH * 2 / (PIXEL_SCALE_FACTOR * SQUARE_SIZE))):
+            if (i + j) % 2 == 0:
+                pyg.draw.rect(bg_surf, BG1, pyg.Rect(
+                    j * SQUARE_SIZE,
+                    i * SQUARE_SIZE,
+                    SQUARE_SIZE, 
+                    SQUARE_SIZE
+                    ))
 
 tileset_width = int(tileset_image.get_width() / 16)
 tileset_height = int(tileset_image.get_height() / 16)
@@ -117,7 +139,7 @@ for i in range(tileset_height):
     for j in range(tileset_width):
         tileset[i * tileset_width + j].blit(tileset_image, (0, 0), pyg.Rect((16 * j, 16 * i), (16, 16)))
 
-bg_img = pyg.image.load(os.path.join(gm.path, 'Sprites', 'background.png'))
+bg_img = pyg.image.load(os.path.join(gm.path, 'Sprites', 'background.png')).convert()
 
 # debug_screen = game_debugger.DebugPanel(vectors.Vec([WIDTH, 80]), vectors.Vec([0, 0]))
 # debug_text = debug_screen.input_box
@@ -255,7 +277,7 @@ class Player(entities.Entity):
                 -math.cos((self.gun.angle) * math.pi / 180),
                 math.sin((self.gun.angle) * math.pi / 180)
             ]),
-            pyg.image.load(os.path.join('Sprites', 'bullet.png')),
+            pyg.image.load(os.path.join('Sprites', 'bullet.png')).convert(),
             self.gun.angle,
             BULLET_SPEED
         )
@@ -271,8 +293,8 @@ player = Player(
         vectors.Vec([0, 0]),
         vectors.Vec([0, 0])
     ),
-    pyg.image.load(os.path.join('Sprites', 'character.png')),
-    entities.Gun(pyg.image.load(os.path.join('Sprites', 'gun.png'))),
+    pyg.image.load(os.path.join('Sprites', 'character.png')).convert_alpha(),
+    entities.Gun(pyg.image.load(os.path.join('Sprites', 'gun.png')).convert_alpha()),
     5
 )
 
@@ -290,6 +312,7 @@ player = Player(
 running = True
 while running:
     screen.fill(BLACK)
+
     # if not debug_text.active:
     if player.on_ground:
         player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
@@ -309,9 +332,10 @@ while running:
     gm.rounded_camera_scroll[0] = vectors.Math.clamp(gm.rounded_camera_scroll[0], CAMERA_BORDERS_X[0],  CAMERA_BORDERS_X[1] - WIDTH)
     gm.rounded_camera_scroll[1] = vectors.Math.clamp(gm.rounded_camera_scroll[1], CAMERA_BORDERS_Y[0],  CAMERA_BORDERS_Y[1] - HEIGHT)
 
-    tile_rects = []
+    draw_bg()
+    surf.blit(bg_surf, (-gm.rounded_camera_scroll[0], -gm.rounded_camera_scroll[1]))
 
-    surf.blit(bg_img,  (-gm.rounded_camera_scroll[0], -gm.rounded_camera_scroll[1]))
+    tile_rects = []
 
     for i in range(len(tilemap_fg)):
         for j in range(len(tilemap_fg[i])):
@@ -329,6 +353,7 @@ while running:
                     16 * j - gm.rounded_camera_scroll[0], 
                     16 * i - gm.rounded_camera_scroll[1])
                 )
+    
 
     for enemy in enemy_list:
         enemy.update(player.physics.position)
@@ -356,7 +381,6 @@ while running:
                 player.take_damage(bullet.damage)
                 enemy.bullets.remove(bullet)
                 if player.current_HP <= 0:
-                    player.die()
                     running = False
             
 
@@ -392,13 +416,13 @@ while running:
         if enemy_list == []:
             map_index += 1
             tilemap_fg, tilemap_mg = load_map()
-            spawn_enemies(3)
+            # spawn_enemies(3)
         player.physics.position[0] = 0
     elif player.physics.position[0] < 0: 
         if enemy_list == []:
             map_index += 1
             tilemap_fg, tilemap_mg = load_map()
-            spawn_enemies(3)
+            # spawn_enemies(3)
         player.physics.position[0] = (WIDTH * 2 - CAMERA_BORDERS_X[0]) / PIXEL_SCALE_FACTOR - player.image.get_width()
 
 
@@ -406,7 +430,7 @@ while running:
         if enemy_list == []:
             map_index += 1
             tilemap_fg, tilemap_mg = load_map()
-            spawn_enemies(3)
+            # spawn_enemies(3)
 
         player.physics.position[1] = 0
 
@@ -467,7 +491,7 @@ while running:
             if (event.key == pyg.K_SPACE 
             and not player.on_ground 
             and player.physics.velocity[1] < 0):
-                player.physics.velocity[1] = RELEASE_FALL_SPEED
+                player.physics.velocity[1] += RELEASE_FALL_SPEED
         if event.type == pyg.MOUSEBUTTONDOWN:
             if event.button == 1: # 1 is left mouse button
                 # if debug_text.rect.collidepoint(event.pos):
