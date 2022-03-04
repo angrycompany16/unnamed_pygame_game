@@ -1,6 +1,38 @@
-import math, os, vectors, animations
+import math, os, vectors, animations, random
 import pygame as pyg
 import game_manager as gm
+
+class PhysicsObject():
+    def __init__(self, position, velocity, acceleration, gravity = True, gravity_multiplier = 50, max_fall_vel = 200, max_jump_vel = 400, max_x_vel = 300, air_friction = 1):
+        self.position = position
+        self.velocity = velocity
+        self.acceleration = acceleration
+
+        if gravity:
+            self.gravity_multiplier = gravity_multiplier
+            self.acceleration = vectors.Vec([0, 9.81 * self.gravity_multiplier])
+
+        self.max_fall_vel = max_fall_vel
+        self.max_jump_vel = max_jump_vel
+        self.max_x_vel = max_x_vel
+        self.air_friction = air_friction
+
+
+    def calculate_movement(self):
+        self.velocity += self.acceleration * gm.delta_time
+        self.velocity[0] *= self.air_friction
+
+        if self.velocity[1] > self.max_fall_vel:
+            self.velocity[1] = self.max_fall_vel
+        elif self.velocity[1] < -self.max_jump_vel:
+            self.velocity[1] = -self.max_jump_vel
+
+        if abs(self.velocity[0]) > self.max_x_vel:
+            self.velocity[0] = math.copysign(self.max_x_vel, self.velocity[0])
+
+        self.position += self.velocity * gm.delta_time
+
+        return self.position
 
 class Entity():
     def __init__(self, max_HP, contact_damage):
@@ -161,3 +193,77 @@ class Gun():
         self.image = flipped
 
         self.flipped = set_flipped
+
+#IDK if there is any point to this
+class Interactable():
+    def interaction(self, new_img):
+        pass
+
+class Chest(Interactable):
+    def __init__(self, pos, img, items):
+        super().__init__()
+        self.pos = pos
+        self.img = img
+        self.items = items
+        self.opened = False
+
+    def open(self, new_img):
+        self.img = new_img
+        self.opened = True
+
+# make items pick-upable
+
+class Item():
+    def __init__(self, img, physics, UI):
+        self.img = img
+        self.physics = physics
+        self.rect = self.img.get_rect()
+        self.rect.topleft = physics.position
+        self.UI = UI
+        
+    def update(self, tiles):
+        if self.physics.velocity.sqr_magnitude() > 0.2:
+            old_pos = self.physics.position
+            max_new_pos = self.physics.calculate_movement()
+
+            new_pos = self.check_collision(old_pos, max_new_pos, tiles)
+
+            self.physics.position = new_pos
+            self.rect.topleft = new_pos
+
+    def check_collision(self, old_pos, new_pos, tiles) -> vectors.Vec:
+        dp = new_pos - old_pos
+        collision_types = {
+            'top': False,
+            'bot': False,
+        }
+
+        collision_id_x = pyg.Rect(
+                new_pos[0], old_pos[1], self.rect.width, self.rect.height
+            ).collidelist(tiles)
+        # check for collision in x direction
+        if collision_id_x != -1:
+            dp[0] = 0
+            self.physics.velocity[0] *= -0.3
+
+        collision_id_y = pyg.Rect(
+                old_pos[0], new_pos[1], self.rect.width, self.rect.height
+            ).collidelist(tiles)
+        # check for collision in y direction
+        if collision_id_y != -1:
+            # check if below ground / jumping
+            if self.physics.velocity[1] < 0:
+                dp[1] = tiles[collision_id_y].bottom - self.rect.top
+                collision_types['top'] = True
+            # check if above ground / falling
+            elif self.physics.velocity[1] > 0:
+                self.on_ground = True
+                self.has_double_jumped = False
+                dp[1] = tiles[collision_id_y].top - self.rect.bottom
+                collision_types['bot'] = True
+
+        if collision_types['top'] == True or collision_types['bot'] == True:
+            self.physics.velocity[1] *= -0.6
+        
+        old_pos += dp
+        return old_pos

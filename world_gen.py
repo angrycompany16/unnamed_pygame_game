@@ -86,22 +86,25 @@ tile_rules = {
 #endregion
 
 class ComboTile():
-    def __init__(self, width, height, tile_order):
+    def __init__(self, width, height,  probability, tile_order):
         self.width = width
         self.height = height
+        self.probability = probability
         self.tile_order = tile_order
 
 combo_tiles = (
     ComboTile(
+        5,
+        5,
         2,
-        3,
-        [13, 14, 15, 16, 17, 18]
+        [11, 11, 19, 20, 11, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34 ,35, 36, 37, 38, 39, 40]
     ),
     ComboTile(
-        5,
-        5,
-        [0, 0, 19, 20, 0, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34 ,35, 36, 37, 38, 39, 40]
-    ),
+        2,
+        3,
+        7,
+        [13, 14, 15, 16, 17, 18]
+    )
 )
 
 # TODO - (low priority) add randomization to the levels
@@ -337,20 +340,22 @@ class Island():
                             tilemap_copy[i][j] = self.rules[key]
                             break
         
-        # TODO - fix the tree placing system so it doesn't overwrite other tiles and doesn't place trees in the air
         for combo_tile in combo_tiles:
             for i in range(len(tilemap_copy)):
                 for j in range(len(tilemap_copy[i])):
-                    if tilemap_copy[i][j] == 11 and random.randint(0, 10) > 7:
-                        contains_block = False
+                    if tilemap_copy[i][j] in range(10, 13) and random.randint(0, 10) > combo_tile.probability:
+                        can_place = True
                         # print(combo_tile.height)
                         # print(combo_tile.width)
-                        for y in range(i, i + combo_tile.height):
-                            for x in range(j, combo_tile.width):
-                                if tilemap_copy[y][x] != 0:
-                                    contains_block = True
+                        for y in range(combo_tile.height):
+                            for x in range(combo_tile.width):
+                                if tilemap_copy[i - y][j + x] not in range(10, 13) and tilemap_copy[i - y][j + x] != 0:
+                                    can_place = False
+                                if y == 0:
+                                    if tilemap_copy[i + 1][j + x] > 9 or tilemap_copy[i + 1][j + x] == 0:
+                                        can_place = False
 
-                        if not contains_block:
+                        if can_place:
                             for y in range(combo_tile.height):
                                 for x in range(combo_tile.width):
                                     # print(x, y)

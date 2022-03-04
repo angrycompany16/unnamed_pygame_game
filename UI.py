@@ -24,3 +24,13 @@ class TextField:
     # Call every frame (to render to the screen)!
     def draw(self, other_surf):
         other_surf.blit(self.surf, self.rect.topleft)
+
+class ItemPickup():
+    def __init__(self, text, font, color) -> None:
+        self.text = text
+        self.font = font
+        self.color = color
+
+    def draw(self):
+        text_surf = self.font.render(str(self.text), False, self.color)
+        return text_surf

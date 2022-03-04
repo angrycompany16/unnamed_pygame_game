@@ -1,8 +1,7 @@
 # TODO - make better character sprite and animations
 # TODO - clean up the code (make it shorter and group together related stuff)
-# TODO - make level generation include trees and stuff
 
-import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random, animations, particle_system
+import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random, animations, particle_system, UI
 import game_manager as gm
 import pygame as pyg
 from ast import literal_eval
@@ -41,6 +40,7 @@ WALK_DAMPING = 20
 RED = pyg.Color(255, 0, 0)
 BLUE = pyg.Color(0, 0, 255)
 BLACK = pyg.Color(0, 0, 0)
+WHITE = pyg.Color(255, 255, 255)
 
 BG1 = pyg.Color(57, 49, 75)
 BG2 = pyg.Color(86, 64, 100)
@@ -174,31 +174,6 @@ def GetAxis(axis) -> int:
 
 #region PLAYER
 
-class PhysicsObject():
-    def __init__(self, position, velocity, acceleration, gravity = True):
-        self.position = position
-        self.velocity = velocity
-        self.acceleration = acceleration
-
-        if gravity:
-            self.acceleration = vectors.Vec([0, 9.81 * GRAVITY_MULTIPLIER])
-
-
-    def calculate_movement(self):
-        self.velocity += vectors.Vec([0, 9.81 * GRAVITY_MULTIPLIER]) * gm.delta_time
-        
-        if self.velocity[1] > MAX_FALL_VEL:
-            self.velocity[1] = MAX_FALL_VEL
-        elif self.velocity[1] < -MAX_JUMP_VEL:
-            self.velocity[1] = -MAX_JUMP_VEL
-
-        if abs(self.velocity[0]) > MAX_X_VEL:
-            self.velocity[0] = math.copysign(MAX_X_VEL, self.velocity[0])
-
-        self.position += self.velocity * gm.delta_time
-
-        return self.position
-
 class Player(entities.Entity):
     def __init__(self, physics, image, gun, max_HP):
         super().__init__(max_HP, 0)
@@ -213,12 +188,13 @@ class Player(entities.Entity):
         self.has_double_jumped = False
 
         self.bullets = []
-        self.collision_types = { 
+        self.collision_types = {
             'top': False,
             'bottom': False,
             'right': False,
             'left': True
         }
+        self.inventory = []
 
     def check_collision(self, old_pos, new_pos) -> vectors.Vec:
         dp = new_pos - old_pos
@@ -259,12 +235,13 @@ class Player(entities.Entity):
 
         new_pos = self.check_collision(old_pos, max_new_pos)
 
-        pyg.draw.rect(surf, RED, (self.rect.x - gm.rounded_camera_scroll[0], self.rect.y -gm.rounded_camera_scroll[1], self.rect.w, self.rect.h), 1)
-        self.physics.position = new_pos
-        self.rect.x = new_pos[0]
-        self.rect.y = new_pos[1]
+        player_screen_pos = gm.get_screen_pos(self.rect.topleft)
 
-        surf.blit(self.image, (self.rect.x - gm.rounded_camera_scroll[0], self.rect.y - gm.rounded_camera_scroll[1]))
+        pyg.draw.rect(surf, RED, (player_screen_pos, (self.rect.w, self.rect.h)), 1)
+        self.physics.position = new_pos
+        self.rect.topleft = new_pos
+
+        surf.blit(self.image, (player_screen_pos))
 
     def shoot(self):
         # Calculate velocity and the  rest of the arguments
@@ -287,8 +264,35 @@ class Player(entities.Entity):
 
         self.bullets.append(bullet)
 
+    def break_block(self, mouse_pos):
+        for tile in tile_rects:
+            check_pos = [0, 0]
+            check_pos[0] = mouse_pos[0] + gm.rounded_camera_scroll[0]
+            check_pos[1] = mouse_pos[1] + gm.rounded_camera_scroll[1]
+
+            dist_x = check_pos[0] - (self.physics.position[0] + player.image.get_width() / 2)
+            dist_y = check_pos[1] - (self.physics.position[1] + player.image.get_height() / 2)
+
+            if (dist_x) ** 2 + (dist_y) ** 2 < 1600:
+                if tile.collidepoint(check_pos):
+                    tile_x = math.floor(check_pos[0] / 16)
+                    tile_y = math.floor(check_pos[1] / 16)
+                    tilemap_fg[tile_y][tile_x] = 0
+
+    def try_interact(self):
+        for chest in chests:
+            chest_rect = chest.img.get_rect()
+            chest_rect.topleft = chest.pos
+            if self.rect.colliderect(chest_rect) and chest.opened == False:
+                chest.open(pyg.image.load(os.path.join('Sprites', 'chest_opened.png')).convert_alpha())
+                for item in chest.items:
+                    item_list.append(item)
+
+    def add_to_inventory(self):
+        pass
+
 player = Player(
-    PhysicsObject(
+    entities.PhysicsObject(
         vectors.Vec([300, -100]),
         vectors.Vec([0, 0]),
         vectors.Vec([0, 0])
@@ -305,9 +309,50 @@ player = Player(
 #     drone = entities.Drone(5, 1, vectors.Vec([random.randint(0, 960), random.randint(0, 810)]), pyg.image.load(os.path.join('Sprites', 'drone_enemy.png')))
 #     enemy_list.append(drone)
 
+
+item_list = []
+
+chests = []
+
+def spawn_loot():
+    global chests
+    chests = []
+
+    for i in range(len(tilemap_mg)):
+        for j in range(len(tilemap_mg[i])):
+            if tilemap_mg[i][j] == 11 and random.randint(0, 10) > 8:
+                item_imgs = [
+                    pyg.image.load(os.path.join('Sprites', 'coin.png')).convert_alpha(),
+                    pyg.image.load(os.path.join('Sprites', 'AK-47.png')).convert_alpha()
+                ]
+
+                new_chest = entities.Chest(
+                    vectors.Vec([j * 16, i * 16]),
+                    pyg.image.load(os.path.join('Sprites', 'chest.png')).convert_alpha(),
+                    [],
+                )
+
+                chests.append(new_chest)
+
+                for n in range(random.randint(5, 10)):
+                    new_chest.items.append(entities.Item(
+                        random.choice(item_imgs), 
+                        entities.PhysicsObject(
+                            vectors.Vec([j * 16, i * 16]),
+                            vectors.Vec([random.randint(-100, 100), random.uniform(-180, -150)]),
+                            vectors.Vec([0, 0]),
+                            air_friction=0.95
+                        ),
+                        UI.ItemPickup("Press E to pick up",pyg.font.SysFont("DejaVu Serif", 8), WHITE)
+                    ))
+
+
+                
 #endregion
 
 #region GAME LOOP
+
+spawn_loot()
 
 running = True
 while running:
@@ -328,38 +373,39 @@ while running:
     # turn the camera scroll value to integer. Helps with bugs apparently
     gm.rounded_camera_scroll = list(map(lambda x: int(x / PIXEL_SCALE_FACTOR), true_camera_scroll))
 
-    # basically just clamps the venter point between specified values
+    # basically just clamps the center point between specified values
     gm.rounded_camera_scroll[0] = vectors.Math.clamp(gm.rounded_camera_scroll[0], CAMERA_BORDERS_X[0],  CAMERA_BORDERS_X[1] - WIDTH)
     gm.rounded_camera_scroll[1] = vectors.Math.clamp(gm.rounded_camera_scroll[1], CAMERA_BORDERS_Y[0],  CAMERA_BORDERS_Y[1] - HEIGHT)
 
     draw_bg()
-    surf.blit(bg_surf, (-gm.rounded_camera_scroll[0], -gm.rounded_camera_scroll[1]))
+    surf.blit(bg_surf, (gm.get_screen_pos([0, 0])))
 
     tile_rects = []
 
     for i in range(len(tilemap_fg)):
         for j in range(len(tilemap_fg[i])):
             if tilemap_fg[i][j] != 0:
-                surf.blit(tileset[tilemap_fg[i][j]], (
-                    16 * j - gm.rounded_camera_scroll[0], 
-                    16 * i - gm.rounded_camera_scroll[1])
+                surf.blit(tileset[tilemap_fg[i][j]],
+                    gm.get_screen_pos((16 * j, 16 * i))
                 )
                 tile_rects.append(pyg.Rect(16 * j, 16 * i, 16, 16))
 
     for i in range(len(tilemap_mg)):
         for j in range(len(tilemap_mg[i])):
             if tilemap_mg[i][j] != 0:
-                surf.blit(tileset[tilemap_mg[i][j]], (
-                    16 * j - gm.rounded_camera_scroll[0], 
-                    16 * i - gm.rounded_camera_scroll[1])
+                surf.blit(tileset[tilemap_mg[i][j]], 
+                    gm.get_screen_pos((16 * j, 16 * i))
                 )
     
+    for chest in chests:
+        surf.blit(chest.img, gm.get_screen_pos(chest.pos))
 
+    player_screen_pos = gm.get_screen_pos(player.physics.position)
+    
     for enemy in enemy_list:
         enemy.update(player.physics.position)
-        surf.blit(enemy.image, (
-                enemy.rect.x - gm.rounded_camera_scroll[0],
-                enemy.rect.y - gm.rounded_camera_scroll[1])
+        surf.blit(enemy.image, 
+                gm.get_screen_pos(enemy.rect.topleft)
             )
         enemy.gun.look_at(
             (
@@ -367,16 +413,16 @@ while running:
                 enemy.pos[1] + enemy.image.get_height() / 2
             ), 
             (
-                player.physics.position[0] - gm.rounded_camera_scroll[0] + player.image.get_width() / 2,
-                player.physics.position[1] - gm.rounded_camera_scroll[1] + player.image.get_height() / 2
+                player_screen_pos[0] + player.image.get_width() / 2,
+                player_screen_pos[1] + player.image.get_height() / 2
             )
         )
 
-        surf.blit(enemy.gun.sprite, (enemy.gun.rect.x  - gm.rounded_camera_scroll[0], enemy.gun.rect.y - gm.rounded_camera_scroll[1]))
+        surf.blit(enemy.gun.sprite, gm.get_screen_pos(enemy.rect.topleft))
         
         for bullet in enemy.bullets:
             bullet.update()
-            surf.blit(bullet.image, (bullet.rect.x - gm.rounded_camera_scroll[0], bullet.rect.y - gm.rounded_camera_scroll[1]))
+            surf.blit(bullet.image, gm.get_screen_pos(bullet.rect.topleft))
             if pyg.Rect.colliderect(bullet.rect, player.rect):
                 player.take_damage(bullet.damage)
                 enemy.bullets.remove(bullet)
@@ -390,7 +436,7 @@ while running:
 
     for bullet in player.bullets:
         bullet.update()
-        surf.blit(bullet.image, (bullet.rect.x - gm.rounded_camera_scroll[0], bullet.rect.y - gm.rounded_camera_scroll[1]))
+        surf.blit(bullet.image, gm.get_screen_pos(bullet.rect.topleft))
         for tile in tile_rects:
             if pyg.Rect.colliderect(bullet.rect, tile) and bullet in player.bullets:
                 player.bullets.remove(bullet)
@@ -406,23 +452,25 @@ while running:
             if bullet in player.bullets:
                 player.bullets.remove(bullet)
 
-
     player.update()
 
-    pyg.draw.rect(surf, RED, pyg.Rect(player.gun.rect.x -gm.rounded_camera_scroll[0], player.gun.rect.y -gm.rounded_camera_scroll[1], player.gun.rect.w, player.gun.rect.h), 1)
-    surf.blit(player.gun.sprite, (player.gun.rect.x  - gm.rounded_camera_scroll[0], player.gun.rect.y - gm.rounded_camera_scroll[1]))
+    surf.blit(player.gun.sprite, gm.get_screen_pos(player.gun.rect.topleft))
 
     if player.physics.position[0] > (WIDTH * 2 - CAMERA_BORDERS_X[0]) / PIXEL_SCALE_FACTOR:
         if enemy_list == []:
             map_index += 1
             tilemap_fg, tilemap_mg = load_map()
             # spawn_enemies(3)
+            spawn_loot()
+            item_list = []
         player.physics.position[0] = 0
-    elif player.physics.position[0] < 0: 
+    elif player.physics.position[0] < 0:
         if enemy_list == []:
             map_index += 1
             tilemap_fg, tilemap_mg = load_map()
             # spawn_enemies(3)
+            spawn_loot()
+            item_list = []
         player.physics.position[0] = (WIDTH * 2 - CAMERA_BORDERS_X[0]) / PIXEL_SCALE_FACTOR - player.image.get_width()
 
 
@@ -431,10 +479,29 @@ while running:
             map_index += 1
             tilemap_fg, tilemap_mg = load_map()
             # spawn_enemies(3)
+            spawn_loot()
+            item_list = []
 
         player.physics.position[1] = 0
 
     mouse_pos = pyg.mouse.get_pos()
+
+    rendering = False
+
+    for item in item_list:
+        item.update(tile_rects)
+        surf.blit(item.img, gm.get_screen_pos(item.physics.position))
+
+        if item.rect.colliderect(player.rect) and not rendering:
+            rendering = True
+            text_surf = item.UI.draw()
+
+            text_rect = text_surf.get_rect()
+            text_rect.w += 10
+            text_rect.topleft = gm.get_screen_pos(item.physics.position)
+            pyg.draw.rect(surf, RED, text_rect)
+            surf.blit(text_surf, gm.get_screen_pos(item.physics.position))
+
 
     player.gun.look_at(
         (
@@ -459,6 +526,9 @@ while running:
     pyg.display.update()
 
     gm.delta_time = main_clock.tick() / 1000
+
+    if pyg.mouse.get_pressed()[0] == True:
+        player.break_block((mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
 
     for event in pyg.event.get():
         if event.type == pyg.QUIT:
@@ -486,6 +556,8 @@ while running:
                     elif not player.has_double_jumped:
                         player.physics.velocity[1] = -JUMP_SPEED
                         player.has_double_jumped = True
+                if event.key == pyg.K_e:
+                    player.try_interact()
 
         if event.type == pyg.KEYUP:
             if (event.key == pyg.K_SPACE 
@@ -498,5 +570,7 @@ while running:
                 #     debug_text.active = True
                 # else:
                 #     debug_text.active = False
-                    player.shoot()
+                    # player.shoot()
+                pass
+                
 #endregion
