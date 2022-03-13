@@ -1,5 +1,6 @@
 # TODO - make better character sprite and animations
 # TODO - clean up the code (make it shorter and group together related stuff)
+# TODO - add an inventory
 
 import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random, animations, particle_system, UI
 import game_manager as gm
@@ -24,17 +25,28 @@ CAMERA_OFFSET_Y = 0
 
 # player stats
 JUMP_SPEED = 300
-MOVE_SPEED = 160
+MOVE_SPEED = 10
 GRAVITY_MULTIPLIER = 50
 RELEASE_FALL_SPEED = 80
 BULLET_SPEED = 400
 SHOOT_BOUNCE_SPEED = 300
 MAX_FALL_VEL = 200
-MAX_X_VEL = 300
+MAX_X_VEL = 150
 MAX_JUMP_VEL = 400
 
 # movement damping
-WALK_DAMPING = 20
+# MUST BE BETWEEN 0 AND 1 (0 = no damping, 1 = full damping)
+class WalkDamping():
+    def __init__(self, gr_b, gr_s, gr_t, a_b, a_s, a_t) -> None:
+        self.grounded_basic = gr_b
+        self.grounded_stopping = gr_s
+        self.grounded_turning = gr_t
+
+        self.jumping_basic = a_b
+        self.jumping_stopping = a_s
+        self.jumping_turning = a_t
+
+damping_object = WalkDamping(0.5, 0.5, 0, 0.5, 0.5, 0)
 
 # colors
 RED = pyg.Color(255, 0, 0)
@@ -52,7 +64,9 @@ SQUARE_SIZE = 32
 #region INITIALIZATION & VARIABLES
 
 pyg.init()
-screen = pyg.display.set_mode((WIDTH, HEIGHT), pyg.NOFRAME)
+screen = pyg.display.set_mode((WIDTH, HEIGHT), 
+# pyg.NOFRAME
+)
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
 bg_surf = pyg.Surface((WIDTH * 2 / PIXEL_SCALE_FACTOR, HEIGHT * 3 / PIXEL_SCALE_FACTOR))
 true_camera_scroll = vectors.Vec([0, 0])
@@ -195,6 +209,7 @@ class Player(entities.Entity):
             'left': True
         }
         self.inventory = []
+        
 
     def check_collision(self, old_pos, new_pos) -> vectors.Vec:
         dp = new_pos - old_pos
@@ -288,8 +303,14 @@ class Player(entities.Entity):
                 for item in chest.items:
                     item_list.append(item)
 
-    def add_to_inventory(self):
-        pass
+        item_id = self.rect.collidelist(item_list)
+        if item_id != -1:
+            self.add_to_inventory(item_list[item_id])
+
+
+    def add_to_inventory(self, item):
+        self.inventory.append(item)
+        item_list.remove(item)
 
 player = Player(
     entities.PhysicsObject(
@@ -359,10 +380,26 @@ while running:
     screen.fill(BLACK)
 
     # if not debug_text.active:
+    vel_x = player.physics.velocity[0]
+    vel_x += GetAxis(Axis.X) * MOVE_SPEED
+    print(vel_x, player.physics.velocity[0])
+    
     if player.on_ground:
-        player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
-    elif not player.on_ground:
-        player.physics.velocity[0] += (GetAxis(Axis.X) * MOVE_SPEED - player.physics.velocity[0]) / WALK_DAMPING
+        if GetAxis(Axis.X) == 0:
+            vel_x *= math.pow(1 - damping_object.grounded_stopping, gm.delta_time * 10)
+        elif math.copysign(1, vel_x) != math.copysign(1, GetAxis(Axis.X)):
+            vel_x *= math.pow(1 - damping_object.grounded_turning, gm.delta_time * 10)
+        else:
+            vel_x *= math.pow(1 - damping_object.grounded_basic, gm.delta_time * 10)
+    else:
+        if GetAxis(Axis.X) == 0:
+            vel_x *= math.pow(1 - damping_object.jumping_stopping, gm.delta_time * 10)
+        elif math.copysign(1, vel_x) != math.copysign(1, GetAxis(Axis.X)):
+            vel_x *= math.pow(1 - damping_object.jumping_turning, gm.delta_time * 10)
+        else:
+            vel_x *= math.pow(1 - damping_object.jumping_basic, gm.delta_time * 10)
+    
+    player.physics.velocity[0] = vel_x
 
     if player.physics.velocity[1] != 0:
         player.on_ground = False
@@ -527,8 +564,8 @@ while running:
 
     gm.delta_time = main_clock.tick() / 1000
 
-    if pyg.mouse.get_pressed()[0] == True:
-        player.break_block((mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
+    # if pyg.mouse.get_pressed()[0] == True:
+    #     player.break_block((mouse_pos[0] / PIXEL_SCALE_FACTOR, mouse_pos[1] / PIXEL_SCALE_FACTOR))
 
     for event in pyg.event.get():
         if event.type == pyg.QUIT:
@@ -559,18 +596,19 @@ while running:
                 if event.key == pyg.K_e:
                     player.try_interact()
 
+
         if event.type == pyg.KEYUP:
             if (event.key == pyg.K_SPACE 
             and not player.on_ground 
             and player.physics.velocity[1] < 0):
-                player.physics.velocity[1] += RELEASE_FALL_SPEED
+                player.physics.velocity[1] = abs(player.physics.velocity[1] - RELEASE_FALL_SPEED) / 20
         if event.type == pyg.MOUSEBUTTONDOWN:
             if event.button == 1: # 1 is left mouse button
                 # if debug_text.rect.collidepoint(event.pos):
                 #     debug_text.active = True
                 # else:
                 #     debug_text.active = False
-                    # player.shoot()
+                player.shoot()
                 pass
                 
 #endregion
