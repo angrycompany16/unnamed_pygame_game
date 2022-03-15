@@ -34,3 +34,22 @@ class ItemPickup():
     def draw(self):
         text_surf = self.font.render(str(self.text), False, self.color)
         return text_surf
+
+class PlayerUI():
+    def __init__(self, inventory_UI) -> None:
+        self.inventory_UI = inventory_UI
+        self.draw = False
+
+    def draw(self):
+        inventory_surf = pyg.Surface()
+
+class InventoryUI():
+    def __init__(self, pos, size, dim, item_grid_size) -> None:
+        self.pos = pos
+        self.size = size
+        self.dim = dim
+        self.item_grid_size = item_grid_size
+        self.items = []
+
+    def add_element(self, item):
+        self.items.append(item)

@@ -1,6 +1,6 @@
 # TODO - make better character sprite and animations
 # TODO - clean up the code (make it shorter and group together related stuff)
-# TODO - add an inventory
+# TODO - add an inventory and UI
 
 import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random, animations, particle_system, UI
 import game_manager as gm
@@ -65,7 +65,7 @@ SQUARE_SIZE = 32
 
 pyg.init()
 screen = pyg.display.set_mode((WIDTH, HEIGHT), 
-# pyg.NOFRAME
+pyg.NOFRAME
 )
 surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
 bg_surf = pyg.Surface((WIDTH * 2 / PIXEL_SCALE_FACTOR, HEIGHT * 3 / PIXEL_SCALE_FACTOR))
@@ -371,6 +371,19 @@ def spawn_loot():
                 
 #endregion
 
+#region UI
+
+player_UI = UI.PlayerUI(
+    UI.InventoryUI(
+        vectors.Vec([28, 12]),
+        vectors.Vec([416, 238]), 
+        vectors.Vec([13, 5]),
+        32
+    )
+)
+
+#endregion
+
 #region GAME LOOP
 
 spawn_loot()
@@ -379,10 +392,8 @@ running = True
 while running:
     screen.fill(BLACK)
 
-    # if not debug_text.active:
     vel_x = player.physics.velocity[0]
     vel_x += GetAxis(Axis.X) * MOVE_SPEED
-    print(vel_x, player.physics.velocity[0])
     
     if player.on_ground:
         if GetAxis(Axis.X) == 0:
@@ -551,12 +562,21 @@ while running:
         )
     )
 
+    # mm yes excellent syntax m'lady
+    if player_UI.draw:
+        inventory_surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
+        inventory_img = pyg.image.load(os.path.join('Sprites', 'inventory.png'))
+
+        surf.blit(inventory_img, (0, 0))
+
     screen.blit(pyg.transform.scale(
             surf.convert(), 
             (WIDTH, HEIGHT)
         ), 
         (0, 0)
     )
+
+
 
     # debug_screen.update(screen)
 
@@ -595,6 +615,9 @@ while running:
                         player.has_double_jumped = True
                 if event.key == pyg.K_e:
                     player.try_interact()
+                if event.key == pyg.K_i:
+                    player_UI.draw = True
+
 
 
         if event.type == pyg.KEYUP:
