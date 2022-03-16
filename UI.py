@@ -40,9 +40,6 @@ class PlayerUI():
         self.inventory_UI = inventory_UI
         self.draw = False
 
-    def draw(self):
-        inventory_surf = pyg.Surface()
-
 class InventoryUI():
     def __init__(self, pos, size, dim, item_grid_size) -> None:
         self.pos = pos
@@ -53,3 +50,9 @@ class InventoryUI():
 
     def add_element(self, item):
         self.items.append(item)
+
+class InventoryItem():
+    def __init__(self, pos, img) -> None:
+        self.pos = pos
+        self.img = img
+

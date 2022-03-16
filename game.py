@@ -1,6 +1,5 @@
 # TODO - make better character sprite and animations
-# TODO - clean up the code (make it shorter and group together related stuff)
-# TODO - add an inventory and UI
+# TODO - make inventory hold items
 
 import math, vectors, os, enum, game_debugger, world_gen, copy, entities, random, animations, particle_system, UI
 import game_manager as gm
@@ -562,7 +561,6 @@ while running:
         )
     )
 
-    # mm yes excellent syntax m'lady
     if player_UI.draw:
         inventory_surf = pyg.Surface((WIDTH / PIXEL_SCALE_FACTOR, HEIGHT / PIXEL_SCALE_FACTOR))
         inventory_img = pyg.image.load(os.path.join('Sprites', 'inventory.png'))
@@ -616,7 +614,7 @@ while running:
                 if event.key == pyg.K_e:
                     player.try_interact()
                 if event.key == pyg.K_i:
-                    player_UI.draw = True
+                    player_UI.draw = not player_UI.draw
 
 
 
